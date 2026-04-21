@@ -47,7 +47,7 @@ button {
 <!-- 📷 카메라 -->
 <video id="video" autoplay playsinline></video>
 
-<!-- ✨ 드론/텍스트 -->
+<!-- ✨ 드론 -->
 <canvas id="c"></canvas>
 
 <!-- 🔘 카메라 버튼 -->
@@ -56,22 +56,49 @@ button {
 <script>
 
 // =======================
-// 📷 카메라 실행
+// 📷 카메라 (후면)
 // =======================
+<script>
+
 async function startCamera(){
 
     try{
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: true
-        });
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+
+        // 🔥 후면 카메라 찾기
+        const backCamera = devices.find(d =>
+            d.kind === "videoinput" &&
+            (d.label.toLowerCase().includes("back") ||
+             d.label.toLowerCase().includes("rear") ||
+             d.label.toLowerCase().includes("environment"))
+        );
+
+        let stream;
+
+        if(backCamera){
+            // 🔥 후면 강제
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: { exact: backCamera.deviceId }
+                }
+            });
+        }else{
+            // fallback
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment" }
+            });
+        }
 
         document.getElementById("video").srcObject = stream;
 
     }catch(e){
-        alert("카메라 권한 필요 / HTTPS 필요");
+        alert("카메라 실행 실패");
+        console.log(e);
     }
 }
 
+</script>
 
 // =======================
 // ✨ Canvas 설정
@@ -84,14 +111,14 @@ canvas.height = window.innerHeight;
 
 
 // =======================
-// 💬 URL 메시지 받기
+// 💬 메시지 받기
 // =======================
 const params = new URLSearchParams(location.search);
 const text = params.get("msg") || "Gina";
 
 
 // =======================
-// 🧠 텍스트 → 좌표 변환
+// 🧠 텍스트 → 픽셀
 // =======================
 const off = document.createElement("canvas");
 const offCtx = off.getContext("2d");
@@ -102,7 +129,6 @@ off.height = canvas.height;
 offCtx.fillStyle = "white";
 offCtx.font = "bold 120px Arial";
 
-// 가운데 정렬
 const metrics = offCtx.measureText(text);
 const tx = (canvas.width - metrics.width) / 2;
 const ty = canvas.height / 2;
@@ -146,7 +172,6 @@ function draw(){
 
     particles.forEach(p=>{
 
-        // 🔥 드론 이동
         p.x += (p.tx - p.x)*0.05;
         p.y += (p.ty - p.y)*0.05;
 
