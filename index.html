@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+
+<style>
+body {
+  margin:0;
+  overflow:hidden;
+  background:black;
+}
+
+/* 📷 카메라 */
+video {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  z-index:0;
+}
+
+/* ✨ 드론 */
+canvas {
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:1;
+}
+
+/* 🔘 버튼 */
+button {
+  position:fixed;
+  top:20px;
+  left:20px;
+  z-index:10;
+  padding:10px 15px;
+  font-size:16px;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- 📷 카메라 -->
+<video id="video" autoplay playsinline></video>
+
+<!-- ✨ 드론/텍스트 -->
+<canvas id="c"></canvas>
+
+<!-- 🔘 카메라 버튼 -->
+<button onclick="startCamera()">카메라 켜기</button>
+
+<script>
+
+// =======================
+// 📷 카메라 실행
+// =======================
+async function startCamera(){
+
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+        });
+
+        document.getElementById("video").srcObject = stream;
+
+    }catch(e){
+        alert("카메라 권한 필요 / HTTPS 필요");
+    }
+}
+
+
+// =======================
+// ✨ Canvas 설정
+// =======================
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+
+// =======================
+// 💬 URL 메시지 받기
+// =======================
+const params = new URLSearchParams(location.search);
+const text = params.get("msg") || "Gina";
+
+
+// =======================
+// 🧠 텍스트 → 좌표 변환
+// =======================
+const off = document.createElement("canvas");
+const offCtx = off.getContext("2d");
+
+off.width = canvas.width;
+off.height = canvas.height;
+
+offCtx.fillStyle = "white";
+offCtx.font = "bold 120px Arial";
+
+// 가운데 정렬
+const metrics = offCtx.measureText(text);
+const tx = (canvas.width - metrics.width) / 2;
+const ty = canvas.height / 2;
+
+offCtx.fillText(text, tx, ty);
+
+
+// =======================
+// ✨ 입자 생성
+// =======================
+let particles = [];
+
+const imgData = offCtx.getImageData(0,0,off.width,off.height);
+
+for(let y=0;y<off.height;y+=6){
+    for(let x=0;x<off.width;x+=6){
+
+        let i = (y * off.width + x) * 4;
+
+        if(imgData.data[i+3] > 128){
+
+            particles.push({
+                x: Math.random()*canvas.width,
+                y: Math.random()*canvas.height,
+                tx: x,
+                ty: y
+            });
+        }
+    }
+}
+
+
+// =======================
+// 🎬 애니메이션
+// =======================
+function draw(){
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle="white";
+
+    particles.forEach(p=>{
+
+        // 🔥 드론 이동
+        p.x += (p.tx - p.x)*0.05;
+        p.y += (p.ty - p.y)*0.05;
+
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,2,0,Math.PI*2);
+        ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+}
+
+draw();
+
+</script>
+
+</body>
+</html>
