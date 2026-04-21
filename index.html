@@ -10,7 +10,6 @@ body {
   background:black;
 }
 
-/* 📷 카메라 */
 video {
   position:fixed;
   top:0;
@@ -21,7 +20,6 @@ video {
   z-index:0;
 }
 
-/* ✨ 드론 */
 canvas {
   position:fixed;
   top:0;
@@ -29,13 +27,12 @@ canvas {
   z-index:1;
 }
 
-/* 🔘 버튼 */
 button {
   position:fixed;
   top:20px;
   left:20px;
   z-index:10;
-  padding:10px 15px;
+  padding:12px 18px;
   font-size:16px;
 }
 </style>
@@ -44,128 +41,103 @@ button {
 
 <body>
 
-<!-- 📷 카메라 -->
 <video id="video" autoplay playsinline></video>
-
-<!-- ✨ 드론 -->
 <canvas id="c"></canvas>
 
-<!-- 🔘 카메라 버튼 -->
 <button onclick="startCamera()">카메라 켜기</button>
 
 <script>
 
-// =======================
-// 📷 카메라 (후면)
-// =======================
-<script>
+let started = false; // 🔥 핵심: 시작 제어
 
-async function startCamera(){
-
-    try{
-
-        // 1️⃣ 권한 먼저 요청 (이거 중요)
-        await navigator.mediaDevices.getUserMedia({ video: true });
-
-        const devices = await navigator.mediaDevices.enumerateDevices();
-
-        const videoDevices = devices.filter(d => d.kind === "videoinput");
-
-        console.log("카메라 목록:", videoDevices);
-
-        let selectedDevice = null;
-
-        // 🔥 방법1: label로 후면 찾기
-        selectedDevice = videoDevices.find(d =>
-            d.label.toLowerCase().includes("back") ||
-            d.label.toLowerCase().includes("rear") ||
-            d.label.toLowerCase().includes("environment")
-        );
-
-        // 🔥 방법2: 없으면 마지막 카메라 (대부분 후면)
-        if(!selectedDevice && videoDevices.length > 1){
-            selectedDevice = videoDevices[videoDevices.length - 1];
-        }
-
-        // 🔥 방법3: 그래도 없으면 첫 번째
-        if(!selectedDevice){
-            selectedDevice = videoDevices[0];
-        }
-
-        console.log("선택된 카메라:", selectedDevice);
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                deviceId: { exact: selectedDevice.deviceId }
-            }
-        });
-
-        document.getElementById("video").srcObject = stream;
-
-    }catch(e){
-        console.error(e);
-        alert("카메라 실행 실패");
-    }
-}
-
-</script>
-
-// =======================
-// ✨ Canvas 설정
-// =======================
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-
-// =======================
-// 💬 메시지 받기
-// =======================
 const params = new URLSearchParams(location.search);
 const text = params.get("msg") || "Gina";
 
-
-// =======================
-// 🧠 텍스트 → 픽셀
-// =======================
-const off = document.createElement("canvas");
-const offCtx = off.getContext("2d");
-
-off.width = canvas.width;
-off.height = canvas.height;
-
-offCtx.fillStyle = "white";
-offCtx.font = "bold 120px Arial";
-
-const metrics = offCtx.measureText(text);
-const tx = (canvas.width - metrics.width) / 2;
-const ty = canvas.height / 2;
-
-offCtx.fillText(text, tx, ty);
-
-
-// =======================
-// ✨ 입자 생성
-// =======================
 let particles = [];
 
-const imgData = offCtx.getImageData(0,0,off.width,off.height);
+// =======================
+// 📷 카메라 시작
+// =======================
+async function startCamera(){
 
-for(let y=0;y<off.height;y+=6){
-    for(let x=0;x<off.width;x+=6){
+    if(started) return;
 
-        let i = (y * off.width + x) * 4;
+    try{
 
-        if(imgData.data[i+3] > 128){
+        // 🔥 권한 요청 먼저
+        await navigator.mediaDevices.getUserMedia({ video: true });
 
-            particles.push({
-                x: Math.random()*canvas.width,
-                y: Math.random()*canvas.height,
-                tx: x,
-                ty: y
-            });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter(d => d.kind === "videoinput");
+
+        let cam = cams.find(d =>
+            d.label.toLowerCase().includes("back") ||
+            d.label.toLowerCase().includes("rear")
+        );
+
+        if(!cam) cam = cams[cams.length - 1];
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: cam.deviceId } }
+        });
+
+        document.getElementById("video").srcObject = stream;
+
+        // 🔥 여기서 드론 시작
+        initParticles();
+        started = true;
+        draw();
+
+    }catch(e){
+        alert("카메라 실행 실패");
+        console.log(e);
+    }
+}
+
+
+// =======================
+// ✨ 텍스트 → 입자
+// =======================
+function initParticles(){
+
+    const off = document.createElement("canvas");
+    const offCtx = off.getContext("2d");
+
+    off.width = canvas.width;
+    off.height = canvas.height;
+
+    offCtx.fillStyle = "white";
+    offCtx.font = "bold 120px Arial";
+
+    const metrics = offCtx.measureText(text);
+    const tx = (canvas.width - metrics.width) / 2;
+    const ty = canvas.height / 2;
+
+    offCtx.fillText(text, tx, ty);
+
+    const imgData = offCtx.getImageData(0,0,off.width,off.height);
+
+    particles = [];
+
+    for(let y=0;y<off.height;y+=6){
+        for(let x=0;x<off.width;x+=6){
+
+            let i = (y * off.width + x) * 4;
+
+            if(imgData.data[i+3] > 128){
+                particles.push({
+                    x: Math.random()*canvas.width,
+                    y: Math.random()*canvas.height,
+                    tx: x,
+                    ty: y
+                });
+            }
         }
     }
 }
@@ -175,6 +147,8 @@ for(let y=0;y<off.height;y+=6){
 // 🎬 애니메이션
 // =======================
 function draw(){
+
+    if(!started) return; // 🔥 시작 전엔 그리지 않음
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -192,8 +166,6 @@ function draw(){
 
     requestAnimationFrame(draw);
 }
-
-draw();
 
 </script>
 
