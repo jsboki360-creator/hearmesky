@@ -29,23 +29,30 @@ canvas {
 
 button {
   position:fixed;
-  bottom:30px;         /* 🔥 아래쪽으로 이동 */
-  left:50%;
-  transform:translateX(-50%);
-
+  bottom:30px;
   z-index:10;
-
-  padding:30px 30px;   /* 🔥 크게 */
-  font-size:30px;
-
-  border-radius:50px;  /* 🔥 둥글게 */
+  padding:18px 28px;
+  font-size:18px;
+  border-radius:50px;
   border:none;
+}
 
-  background:rgba(0,0,0,0.6);  /* 🔥 반투명 */
-  color:blue;
+/* 카메라 버튼 */
+button:first-of-type {
+  left:30%;
+  transform:translateX(-50%);
+  background:black;
+  color:red;
+}
 
-  backdrop-filter:blur(10px);  /* 🔥 유리 느낌 */
-}</style>
+/* 앱설치 버튼 */
+button:last-of-type {
+  left:70%;
+  transform:translateX(-50%);
+  background:red;
+  color:white;
+}
+</style>
 
 </head>
 
