@@ -70,10 +70,10 @@ async function startCamera(){
 
     try{
 
-        // 🔥 가장 먼저 기본 실행 (중요)
-        let stream = await navigator.mediaDevices.getUserMedia({
+        // 🔥 단 1번만 호출
+        const stream = await navigator.mediaDevices.getUserMedia({
             video: {
-                facingMode: "environment" // 👉 후면 우선
+                facingMode: "environment" // 후면 우선
             }
         });
 
@@ -86,27 +86,11 @@ async function startCamera(){
 
     }catch(e){
 
-        console.log("1차 실패:", e);
+        console.log("카메라 에러:", e);
 
-        try{
-            // 🔥 fallback (무조건 실행)
-            let stream = await navigator.mediaDevices.getUserMedia({
-                video: true
-            });
-
-            document.getElementById("video").srcObject = stream;
-
-            initParticles();
-            started = true;
-            draw();
-
-        }catch(err){
-            console.log("2차 실패:", err);
-            alert("카메라 실행 실패 (권한 또는 기기 문제)");
-        }
+        alert("카메라 실행 실패 (권한 또는 브라우저 제한)");
     }
 }
-
 
 // =======================
 // ✨ 텍스트 → 입자
