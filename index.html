@@ -64,37 +64,47 @@ async function startCamera(){
 
     try{
 
+        // 1️⃣ 권한 먼저 요청 (이거 중요)
+        await navigator.mediaDevices.getUserMedia({ video: true });
+
         const devices = await navigator.mediaDevices.enumerateDevices();
 
-        // 🔥 후면 카메라 찾기
-        const backCamera = devices.find(d =>
-            d.kind === "videoinput" &&
-            (d.label.toLowerCase().includes("back") ||
-             d.label.toLowerCase().includes("rear") ||
-             d.label.toLowerCase().includes("environment"))
+        const videoDevices = devices.filter(d => d.kind === "videoinput");
+
+        console.log("카메라 목록:", videoDevices);
+
+        let selectedDevice = null;
+
+        // 🔥 방법1: label로 후면 찾기
+        selectedDevice = videoDevices.find(d =>
+            d.label.toLowerCase().includes("back") ||
+            d.label.toLowerCase().includes("rear") ||
+            d.label.toLowerCase().includes("environment")
         );
 
-        let stream;
-
-        if(backCamera){
-            // 🔥 후면 강제
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    deviceId: { exact: backCamera.deviceId }
-                }
-            });
-        }else{
-            // fallback
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" }
-            });
+        // 🔥 방법2: 없으면 마지막 카메라 (대부분 후면)
+        if(!selectedDevice && videoDevices.length > 1){
+            selectedDevice = videoDevices[videoDevices.length - 1];
         }
+
+        // 🔥 방법3: 그래도 없으면 첫 번째
+        if(!selectedDevice){
+            selectedDevice = videoDevices[0];
+        }
+
+        console.log("선택된 카메라:", selectedDevice);
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                deviceId: { exact: selectedDevice.deviceId }
+            }
+        });
 
         document.getElementById("video").srcObject = stream;
 
     }catch(e){
+        console.error(e);
         alert("카메라 실행 실패");
-        console.log(e);
     }
 }
 
