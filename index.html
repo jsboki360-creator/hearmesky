@@ -3,9 +3,14 @@
 <head>
 <meta charset="utf-8">
 
+<!-- 🔥 모바일 전체화면 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
 <style>
-body {
+html, body {
   margin:0;
+  padding:0;
+  height:100%;
   overflow:hidden;
   background:black;
 }
@@ -16,7 +21,8 @@ video {
   top:0;
   left:0;
   width:100%;
-  height:100%;
+  height:100dvh;
+  height:100vh;
   object-fit:cover;
   z-index:0;
 }
@@ -26,6 +32,9 @@ canvas {
   position:fixed;
   top:0;
   left:0;
+  width:100%;
+  height:100dvh;
+  height:100vh;
   z-index:1;
 }
 
@@ -38,9 +47,10 @@ canvas {
   font-size:20px;
   border-radius:50px;
   border:none;
+  backdrop-filter:blur(10px);
 }
 
-/* 📷 카메라 버튼 */
+/* 📷 카메라 */
 .camBtn {
   left:30%;
   transform:translateX(-50%);
@@ -48,12 +58,26 @@ canvas {
   color:red;
 }
 
-/* 📱 앱 버튼 */
+/* 📱 앱 */
 .appBtn {
   left:70%;
   transform:translateX(-50%);
   background:red;
   color:white;
+}
+
+/* 📥 메시지 리스트 */
+#msgList {
+  position:fixed;
+  top:20px;
+  right:20px;
+  z-index:20;
+  color:white;
+  font-size:14px;
+  background:rgba(0,0,0,0.5);
+  padding:10px;
+  border-radius:10px;
+  max-width:200px;
 }
 </style>
 
@@ -64,27 +88,30 @@ canvas {
 <video id="video" autoplay playsinline></video>
 <canvas id="c"></canvas>
 
-<!-- 🔘 버튼 -->
+<!-- 버튼 -->
 <button class="btn camBtn" onclick="startCamera()">📷 Camera</button>
 <button class="btn appBtn" onclick="installApp()">📱 App</button>
+
+<!-- 메시지 리스트 -->
+<div id="msgList"></div>
 
 <script>
 
 let started = false;
+let particles = [];
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-const params = new URLSearchParams(location.search);
-const text = params.get("msg") || "Gina";
-
-let particles = [];
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.onresize = resize;
 
 // =======================
-// 📷 카메라 시작
+// 📷 카메라
 // =======================
 async function startCamera(){
 
@@ -98,7 +125,7 @@ async function startCamera(){
 
         document.getElementById("video").srcObject = stream;
 
-        initParticles();
+        initParticles(text);
         started = true;
         draw();
 
@@ -112,17 +139,63 @@ async function startCamera(){
 // 📱 앱 설치
 // =======================
 function installApp(){
-
-    // 👉 나중에 실제 앱 주소 넣기
     window.location.href =
     "https://play.google.com/store/apps/details?id=com.example.hearmesky";
 }
 
+// =======================
+// 💬 메시지
+// =======================
+const params = new URLSearchParams(location.search);
+const text = params.get("msg") || "We Love Gina";
+
+// 저장
+function saveMessage(msg){
+    let list = JSON.parse(localStorage.getItem("msgs") || "[]");
+
+    list.push({
+        text: msg,
+        time: Date.now(),
+        ttl: 60000
+    });
+
+    localStorage.setItem("msgs", JSON.stringify(list));
+}
+
+// 리스트 표시
+function drawList(){
+
+    const listDiv = document.getElementById("msgList");
+
+    let list = JSON.parse(localStorage.getItem("msgs") || "[]");
+    let now = Date.now();
+
+    list = list.filter(m => now - m.time < m.ttl);
+    localStorage.setItem("msgs", JSON.stringify(list));
+
+    listDiv.innerHTML = "";
+
+    list.forEach(m => {
+
+        let remain = Math.floor((m.ttl - (now - m.time)) / 1000);
+
+        const div = document.createElement("div");
+        div.innerHTML = `${m.text} (${remain}s)`;
+
+        div.onclick = () => {
+            initParticles(m.text);
+        };
+
+        listDiv.appendChild(div);
+    });
+}
+
+setInterval(drawList, 1000);
 
 // =======================
 // ✨ 텍스트 → 입자
 // =======================
-function initParticles(){
+function initParticles(customText){
 
     const off = document.createElement("canvas");
     const offCtx = off.getContext("2d");
@@ -133,11 +206,11 @@ function initParticles(){
     offCtx.fillStyle = "white";
     offCtx.font = "bold 120px Arial";
 
-    const metrics = offCtx.measureText(text);
+    const metrics = offCtx.measureText(customText);
     const tx = (canvas.width - metrics.width) / 2;
     const ty = canvas.height / 2;
 
-    offCtx.fillText(text, tx, ty);
+    offCtx.fillText(customText, tx, ty);
 
     const imgData = offCtx.getImageData(0,0,off.width,off.height);
 
@@ -159,7 +232,6 @@ function initParticles(){
         }
     }
 }
-
 
 // =======================
 // 🎬 애니메이션
@@ -184,6 +256,11 @@ function draw(){
 
     requestAnimationFrame(draw);
 }
+
+// =======================
+// 초기 메시지 저장
+// =======================
+saveMessage(text);
 
 </script>
 
