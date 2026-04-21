@@ -70,33 +70,40 @@ async function startCamera(){
 
     try{
 
-        // 🔥 권한 요청 먼저
-        await navigator.mediaDevices.getUserMedia({ video: true });
-
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const cams = devices.filter(d => d.kind === "videoinput");
-
-        let cam = cams.find(d =>
-            d.label.toLowerCase().includes("back") ||
-            d.label.toLowerCase().includes("rear")
-        );
-
-        if(!cam) cam = cams[cams.length - 1];
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: { exact: cam.deviceId } }
+        // 🔥 가장 먼저 기본 실행 (중요)
+        let stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: "environment" // 👉 후면 우선
+            }
         });
 
         document.getElementById("video").srcObject = stream;
 
-        // 🔥 여기서 드론 시작
+        // 🔥 드론 시작
         initParticles();
         started = true;
         draw();
 
     }catch(e){
-        alert("카메라 실행 실패");
-        console.log(e);
+
+        console.log("1차 실패:", e);
+
+        try{
+            // 🔥 fallback (무조건 실행)
+            let stream = await navigator.mediaDevices.getUserMedia({
+                video: true
+            });
+
+            document.getElementById("video").srcObject = stream;
+
+            initParticles();
+            started = true;
+            draw();
+
+        }catch(err){
+            console.log("2차 실패:", err);
+            alert("카메라 실행 실패 (권한 또는 기기 문제)");
+        }
     }
 }
 
