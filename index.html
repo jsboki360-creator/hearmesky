@@ -109,7 +109,7 @@ onresize=resize;
 
 let streamRef;
 
-// ================= COMMON =================
+// ================= TEXT =================
 function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
  let words=text.split(" "), line="", lines=[];
  for(let w of words){
@@ -127,7 +127,7 @@ function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
  });
 }
 
-// ================= STANDARD =================
+// ---------- STANDARD ----------
 function drawStandard(){
  ctx.fillStyle="#ffffff";
  ctx.font="bold 48px Arial";
@@ -136,20 +136,19 @@ function drawStandard(){
  drawMultiline(ctx,text,canvas.width/2,canvas.height/2,canvas.width*0.8,60);
 }
 
-// ================= CLOUD =================
+// ---------- CLOUD (이미지 방식) ----------
 let cloudImage;
 
 function initCloud(){
 
- const off = document.createElement("canvas");
- const o = off.getContext("2d");
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
 
- off.width = canvas.width;
- off.height = canvas.height;
+ off.width=canvas.width;
+ off.height=canvas.height;
 
- let size = Math.min(canvas.width/6, canvas.height/4);
+ let size=Math.min(canvas.width/6,canvas.height/4);
 
- // 텍스트
  o.fillStyle="white";
  o.font=`bold ${size}px Arial`;
  o.textAlign="center";
@@ -157,31 +156,26 @@ function initCloud(){
 
  drawMultiline(o,text,canvas.width/2,canvas.height/2,canvas.width*0.8,size*1.2);
 
- // 🔥 blur로 구름 만들기
- o.globalCompositeOperation="source-over";
- o.filter="blur(20px)";
+ // blur → 구름
+ o.filter="blur(18px)";
  o.drawImage(off,0,0);
 
- // 저장
  cloudImage = off;
 }
+
 function drawCloud(){
 
- ctx.save();
+ let drift = Math.sin(Date.now()*0.001)*4;
 
  ctx.globalAlpha = 0.9;
-
- // 🔥 살짝 흔들림 (구름 느낌)
- let drift = Math.sin(Date.now()*0.001)*5;
-
  ctx.drawImage(cloudImage, drift, 0);
-
- ctx.restore();
 }
-// ================= DRONE LED =================
+
+// ---------- DRONE ----------
 let droneParticles=[];
 
 function initDrone(){
+
  const off=document.createElement("canvas");
  const o=off.getContext("2d");
 
@@ -219,7 +213,6 @@ function initDrone(){
 function drawDrone(){
 
  ctx.save();
-
  ctx.shadowBlur = 10;
  ctx.shadowColor = "#66ccff";
 
@@ -243,36 +236,35 @@ function drawDrone(){
  ctx.restore();
 }
 
-// ================= AURORA (RED) =================
+// ================= AURORA =================
+let auroraTime = 0;
+
 function drawAurora(){
 
- const t = Date.now()*0.0005;
+ auroraTime += 0.025;
+
+ const t = auroraTime;
 
  ctx.save();
-
- // 🔥 더 진하게
  ctx.globalAlpha = 0.38;
-
- // 🔥 너무 번지지 않게
  ctx.filter = "blur(3px)";
 
  const count = 14;
 
  for(let i=0;i<count;i++){
 
-   let baseX = (i/count)*canvas.width;
-   let width = canvas.width/count*1.6;
+   let baseX=(i/count)*canvas.width;
+   let width=canvas.width/count*1.6;
 
-   // 🔴 붉은 계열 (조금 더 넓게)
-   let hue = 350 + Math.sin(t + i)*25; // red ~ magenta
+   let hue=350 + Math.sin(t + i)*25;
 
-   let g = ctx.createLinearGradient(baseX,0,baseX,canvas.height*0.7);
+   let g=ctx.createLinearGradient(baseX,0,baseX,canvas.height*0.7);
 
    g.addColorStop(0,`hsla(${hue},100%,65%,0.35)`);
    g.addColorStop(0.5,`hsla(${hue+20},100%,55%,0.25)`);
    g.addColorStop(1,"transparent");
 
-   ctx.fillStyle = g;
+   ctx.fillStyle=g;
 
    ctx.beginPath();
 
@@ -305,7 +297,8 @@ function drawAurora(){
 
  ctx.restore();
 }
-// ================= FIREWORKS (RED) =================
+
+// ================= FIREWORKS =================
 let rockets=[], sparks=[];
 
 function launchRocket(){
@@ -321,26 +314,26 @@ setInterval(launchRocket,1200);
 
 function explode(x,y){
 
- const colors = [
-  "#ff3b3b",
-  "#ff6b6b",
-  "#ff2e63",
-  "#ff8c42",
-  "#ff0000"
- ];
+ const isDrone = (txtStyle==="drone");
 
- let c = colors[Math.floor(Math.random()*colors.length)];
+ const sizeScale = isDrone ? 2.2 : 1.0;
+ const speedScale = isDrone ? 1.6 : 1.0;
+ const count = isDrone ? 110 : 60;
 
- for(let i=0;i<60;i++){
+ const colors=["#ff3b3b","#ff6b6b","#ff2e63","#ff8c42","#ff0000"];
+ let c=colors[Math.floor(Math.random()*colors.length)];
+
+ for(let i=0;i<count;i++){
+
    let a=Math.random()*Math.PI*2;
-   let s=Math.random()*2+1;
+   let s=(Math.random()*2+1)*speedScale;
 
    sparks.push({
      x,y,
      vx:Math.cos(a)*s,
      vy:Math.sin(a)*s,
-     life:80,
-     size:Math.random()*2+1,
+     life:90,
+     size:(Math.random()*2+1)*sizeScale,
      color:c
    });
  }
@@ -363,16 +356,22 @@ function drawFireworks(){
  });
 
  sparks.forEach((s,i)=>{
+
+   ctx.shadowBlur = (txtStyle==="drone") ? 12 : 6;
+   ctx.shadowColor = s.color;
+
    s.x+=s.vx;
    s.y+=s.vy;
    s.vy+=0.03;
    s.life--;
 
-   ctx.globalAlpha=s.life/80;
+   ctx.globalAlpha=s.life/90;
    ctx.fillStyle=s.color;
+
    ctx.beginPath();
    ctx.arc(s.x,s.y,s.size,0,Math.PI*2);
    ctx.fill();
+
    ctx.globalAlpha=1;
 
    if(s.life<=0) sparks.splice(i,1);
@@ -414,11 +413,12 @@ function countdown(){
 // ================= DRAW =================
 function draw(){
 
- if(txtStyle==="drone"){
+ if(txtStyle==="drone" || txtStyle==="cloud"){
    ctx.clearRect(0,0,canvas.width,canvas.height);
- }else{
+ }
+ else{
    ctx.globalCompositeOperation="destination-out";
-   ctx.fillStyle="rgba(0,0,0,0.015)";
+   ctx.fillStyle="rgba(0,0,0,0.08)";
    ctx.fillRect(0,0,canvas.width,canvas.height);
    ctx.globalCompositeOperation="source-over";
  }
