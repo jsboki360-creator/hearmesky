@@ -33,6 +33,7 @@ height:100%;
 z-index:1;
 }
 
+/* START 화면 */
 #intro{
 position:fixed;
 width:100%;
@@ -58,6 +59,7 @@ width:220px;
 }
 
 .startBtn{background:red;color:white;}
+.appBtn{background:white;color:black;}
 
 #count{
 position:fixed;
@@ -77,6 +79,7 @@ z-index:5;
   <div class="introBox">
     <h1>HearMeSKY</h1>
     <button class="startBtn" onclick="start()">START</button>
+    <button class="appBtn" onclick="goApp()">APP 가입</button>
   </div>
 </div>
 
@@ -86,11 +89,14 @@ z-index:5;
 
 <script>
 
-// PARAM
+// ================= PARAM =================
 const params = new URLSearchParams(location.search);
-const text = (params.get("msg") || "WE LOVE YOU").replaceAll("_"," ");
 
-// SETUP
+const text = (params.get("msg") || "WE LOVE YOU").replaceAll("_"," ");
+const txtStyle = params.get("txtsty") || "cloud";
+const effStyle = params.get("effsty") || "aurora";
+
+// ================= SETUP =================
 const video = document.getElementById("video");
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -105,7 +111,6 @@ onresize=resize;
 let streamRef;
 
 // ================= TEXT =================
-let cloudParticles=[];
 
 function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
  let words=text.split(" "), line="", lines=[];
@@ -123,6 +128,9 @@ function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
    ctx.fillText(l.trim(),x,startY+i*lineHeight);
  });
 }
+
+// ---------- CLOUD ----------
+let cloudParticles=[];
 
 function initCloud(){
 
@@ -150,13 +158,13 @@ function initCloud(){
 
     let i=(y*off.width+x)*4;
 
-    if(img.data[i+3]>128 && Math.random()<0.25){
+    if(img.data[i+3]>128 && Math.random()<0.3){
 
       cloudParticles.push({
         x:x,
         y:y,
         r:Math.random()*2+1,
-        a:Math.random()*0.15+0.08
+        a:Math.random()*0.2+0.1
       });
 
     }
@@ -170,20 +178,71 @@ function drawCloud(){
  ctx.shadowColor="white";
 
  cloudParticles.forEach(p=>{
-
    let drift=Math.sin(Date.now()*0.001+p.y)*2;
 
    ctx.globalAlpha=p.a;
-
    ctx.beginPath();
    ctx.arc(p.x+drift,p.y,p.r,0,Math.PI*2);
    ctx.fillStyle="#fff";
    ctx.fill();
-
  });
 
  ctx.globalAlpha=1;
  ctx.shadowBlur=0;
+}
+
+// ---------- DRONE ----------
+let droneParticles=[];
+
+function initDrone(){
+
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
+
+ off.width=canvas.width;
+ off.height=canvas.height;
+
+ let size=Math.min(canvas.width/6,canvas.height/4);
+
+ o.fillStyle="white";
+ o.font=`bold ${size}px Arial`;
+ o.textAlign="center";
+ o.textBaseline="middle";
+
+ drawMultiline(o,text,canvas.width/2,canvas.height/2,canvas.width*0.8,size*1.2);
+
+ const img=o.getImageData(0,0,off.width,off.height);
+
+ droneParticles=[];
+
+ for(let y=0;y<off.height;y+=6){
+  for(let x=0;x<off.width;x+=6){
+
+    let i=(y*off.width+x)*4;
+
+    if(img.data[i+3]>128){
+
+      droneParticles.push({
+        x:Math.random()*canvas.width,
+        y:Math.random()*canvas.height,
+        tx:x,
+        ty:y
+      });
+
+    }
+  }
+ }
+}
+
+function drawDrone(){
+
+ ctx.fillStyle="#ffffff";
+
+ droneParticles.forEach(p=>{
+   p.x += (p.tx - p.x)*0.05;
+   p.y += (p.ty - p.y)*0.05;
+   ctx.fillRect(p.x,p.y,2,2);
+ });
 }
 
 // ================= AURORA =================
@@ -192,8 +251,6 @@ function drawAurora(){
  const t = Date.now()*0.0005;
 
  ctx.save();
-
- ctx.globalCompositeOperation="source-over";
  ctx.globalAlpha=0.18;
  ctx.filter="blur(4px)";
 
@@ -260,7 +317,10 @@ async function start(){
 
  await countdown();
 
- initCloud();
+ // 🔥 핵심 분기
+ if(txtStyle==="cloud") initCloud();
+ if(txtStyle==="drone") initDrone();
+
  draw();
 }
 
@@ -284,10 +344,17 @@ function draw(){
  ctx.fillRect(0,0,canvas.width,canvas.height);
  ctx.globalCompositeOperation="source-over";
 
- drawAurora();
- drawCloud();
+ if(effStyle==="aurora") drawAurora();
+
+ if(txtStyle==="cloud") drawCloud();
+ if(txtStyle==="drone") drawDrone();
 
  requestAnimationFrame(draw);
+}
+
+// ================= APP =================
+function goApp(){
+ location.href="https://play.google.com/store/apps/details?id=com.example.hearmesky";
 }
 
 </script>
