@@ -10,6 +10,7 @@ html, body {
   padding:0;
   overflow:hidden;
   background:black;
+  font-family:Arial;
 }
 
 /* 📷 카메라 */
@@ -33,32 +34,42 @@ canvas {
   z-index:1;
 }
 
-/* 🔘 버튼 */
-.btn {
+/* 🔥 인트로 */
+#intro {
   position:fixed;
-  bottom:40px;
-  z-index:10;
-  padding:18px 28px;
-  font-size:18px;
-  border-radius:50px;
-  border:none;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:black;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
 }
 
-/* START 버튼 */
-.startBtn {
-  left:50%;
-  transform:translateX(-50%);
+.introBox {
+  text-align:center;
+}
+
+.introBox h1 {
+  font-size:42px;
+  margin-bottom:10px;
+}
+
+.introBox p {
+  opacity:0.7;
+}
+
+.introBox button {
+  margin-top:25px;
+  padding:15px 30px;
+  font-size:18px;
+  border:none;
+  border-radius:30px;
   background:red;
   color:white;
-  font-size:22px;
-}
-
-/* 📱 앱 */
-.appBtn {
-  left:85%;
-  transform:translateX(-50%);
-  background:white;
-  color:black;
 }
 
 /* ⏱ 카운트다운 */
@@ -87,18 +98,29 @@ canvas {
   max-width:160px;
 }
 </style>
-
 </head>
 
 <body>
 
+<!-- 🔥 인트로 -->
+<div id="intro">
+  <div class="introBox">
+    <h1>HearMeSKY</h1>
+    <p>하늘을 확인하세요</p>
+    <button onclick="enter()">START EXPERIENCE</button>
+  </div>
+</div>
+
+<!-- 📷 카메라 -->
 <video id="video" autoplay playsinline></video>
+
+<!-- ✨ 드론 -->
 <canvas id="c"></canvas>
 
-<button class="btn startBtn" onclick="startFlow()">START</button>
-<button class="btn appBtn" onclick="installApp()">📱</button>
-
+<!-- ⏱ -->
 <div id="countdown"></div>
+
+<!-- 📥 -->
 <div id="msgList"></div>
 
 <script>
@@ -118,7 +140,7 @@ resize();
 window.onresize = resize;
 
 // =======================
-// 📷 카메라 권한
+// 📷 카메라
 // =======================
 async function requestCamera(){
 
@@ -141,20 +163,20 @@ async function requestCamera(){
 }
 
 // =======================
-// 🎬 전체 흐름
+// 🚀 시작 흐름
 // =======================
-async function startFlow(){
+async function enter(){
 
-    if(started) return;
-
-    // 1️⃣ 카메라 먼저 허용
     const ok = await requestCamera();
     if(!ok) return;
 
-    // 2️⃣ 카운트다운
+    // 인트로 제거
+    document.getElementById("intro").style.display = "none";
+
+    // 카운트다운
     await countdown();
 
-    // 3️⃣ 쇼 시작
+    // 쇼 시작
     startShow();
 }
 
@@ -194,14 +216,6 @@ function startShow(){
     initParticles(text);
     started = true;
     draw();
-}
-
-// =======================
-// 📱 앱 설치
-// =======================
-function installApp(){
-    window.location.href =
-    "https://play.google.com/store/apps/details?id=com.example.hearmesky";
 }
 
 // =======================
