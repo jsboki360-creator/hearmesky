@@ -10,6 +10,7 @@ margin:0;
 padding:0;
 overflow:hidden;
 background:black;
+font-family:Arial;
 }
 
 video,canvas{
@@ -20,8 +21,8 @@ top:0;
 left:0;
 }
 
-canvas{ z-index:1; }
 video{ z-index:0; }
+canvas{ z-index:1; }
 
 #intro{
 position:fixed;
@@ -35,12 +36,29 @@ align-items:center;
 color:white;
 }
 
+.introBox{text-align:center;}
+
 button{
+display:block;
+margin:12px auto;
 padding:15px 30px;
-margin:10px;
 border-radius:30px;
 border:none;
 font-size:18px;
+width:220px;
+}
+
+.startBtn{background:red;color:white;}
+.appBtn{background:white;color:black;}
+
+#count{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+font-size:120px;
+color:white;
+z-index:5;
 }
 </style>
 </head>
@@ -48,14 +66,16 @@ font-size:18px;
 <body>
 
 <div id="intro">
-  <div>
+  <div class="introBox">
     <h1>HearMeSKY</h1>
-    <button onclick="start()">START</button>
+    <button class="startBtn" onclick="start()">START</button>
+    <button class="appBtn" onclick="goApp()">APP 가입</button>
   </div>
 </div>
 
 <video id="video" autoplay playsinline muted></video>
 <canvas id="c"></canvas>
+<div id="count"></div>
 
 <script>
 
@@ -70,14 +90,37 @@ resize();
 onresize=resize;
 
 // ======================
-// TEXT
+// TEXT (줄바꿈)
 // ======================
-const text = new URLSearchParams(location.search).get("msg") || "LOVE";
+const rawText = new URLSearchParams(location.search).get("msg") || "WE LOVE YOU";
+const text = rawText.replaceAll("_"," ");
 
 let particles = [];
-let textMask;
 
-// 텍스트 마스크 생성
+function drawMultiline(ctx, text, x, y, maxWidth, lineHeight){
+
+ let words = text.split(" ");
+ let line="", lines=[];
+
+ for(let w of words){
+   let test=line+w+" ";
+   if(ctx.measureText(test).width > maxWidth){
+     lines.push(line);
+     line=w+" ";
+   }else{
+     line=test;
+   }
+ }
+ lines.push(line);
+ lines = lines.slice(0,3);
+
+ let startY = y - (lines.length*lineHeight)/2;
+
+ lines.forEach((l,i)=>{
+   ctx.fillText(l.trim(), x, startY+i*lineHeight);
+ });
+}
+
 function buildText(){
 
  const off = document.createElement("canvas");
@@ -86,75 +129,72 @@ function buildText(){
  off.width=canvas.width;
  off.height=canvas.height;
 
- let size = Math.min(canvas.width/6,canvas.height/4);
+ let size = Math.min(canvas.width/7, canvas.height/4);
 
  o.fillStyle="white";
  o.font=`bold ${size}px Arial`;
  o.textAlign="center";
  o.textBaseline="middle";
 
- o.fillText(text.replaceAll("_"," "), canvas.width/2, canvas.height/2);
+ drawMultiline(o,text,canvas.width/2,canvas.height/2,canvas.width*0.8,size*1.3);
 
  const img = o.getImageData(0,0,off.width,off.height);
- textMask = img;
 
  particles=[];
 
  for(let y=0;y<off.height;y+=6){
   for(let x=0;x<off.width;x+=6){
-
     let i=(y*off.width+x)*4;
-
     if(img.data[i+3]>128){
-
       particles.push({
         x:Math.random()*canvas.width,
         y:Math.random()*canvas.height,
         tx:x,
         ty:y
       });
-
     }
   }
  }
 }
 
 // ======================
-// FIREWORKS
+// FIREWORKS (고급)
 // ======================
 let rockets=[];
 let sparks=[];
-const colors=["#ff4040","#ffcc00","#00ccff","#66ff66","#ff66ff","#ffffff"];
+
+const fireColors = ["#ff4040","#ffcc00","#ffffff"];
 
 function launchRocket(){
  rockets.push({
    x:Math.random()*canvas.width,
    y:canvas.height,
-   vx:(Math.random()-0.5)*2,
-   vy:-(Math.random()*6+8),
-   life:60
+   vx:(Math.random()-0.5)*1.2,
+   vy:-(Math.random()*5+7),
+   life:70
  });
 }
 
 function explode(x,y){
 
- for(let i=0;i<120;i++){
+ const baseColor = fireColors[Math.floor(Math.random()*fireColors.length)];
+
+ for(let i=0;i<100;i++){
 
   let a=Math.random()*Math.PI*2;
-  let s=Math.random()*5+2;
+  let s=Math.random()*3+1.5;
 
   sparks.push({
     x,y,
     vx:Math.cos(a)*s,
     vy:Math.sin(a)*s,
-    life:80,
-    color:colors[Math.floor(Math.random()*colors.length)]
+    life:90,
+    color:baseColor
   });
-
  }
 }
 
-setInterval(launchRocket,600);
+setInterval(launchRocket,900);
 
 // ======================
 // START
@@ -168,8 +208,29 @@ async function start(){
 
  document.getElementById("intro").style.display="none";
 
+ await countdown();
+
  buildText();
  draw();
+}
+
+// 카운트
+function countdown(){
+ return new Promise(res=>{
+  let c=3;
+  count.innerText=c;
+
+  let t=setInterval(()=>{
+    c--;
+    if(c>0){
+      count.innerText=c;
+    }else{
+      count.innerText="";
+      clearInterval(t);
+      res();
+    }
+  },1000);
+ });
 }
 
 // ======================
@@ -177,76 +238,65 @@ async function start(){
 // ======================
 function draw(){
 
- // 잔상
- ctx.fillStyle="rgba(0,0,0,0.2)";
+ // 부드러운 잔상
+ ctx.fillStyle="rgba(0,0,0,0.12)";
  ctx.fillRect(0,0,canvas.width,canvas.height);
 
- // =================
- // 🔥 불꽃 (텍스트 영역 제외)
- // =================
+ // 로켓
  rockets.forEach((r,i)=>{
+  r.x+=r.vx;
+  r.y+=r.vy;
+  r.vy+=0.12;
 
-   r.x+=r.vx;
-   r.y+=r.vy;
-   r.vy+=0.15;
+  ctx.fillStyle="#ffffff";
+  ctx.fillRect(r.x,r.y,2,6);
 
-   ctx.fillStyle="#fff";
-   ctx.fillRect(r.x,r.y,2,6);
-
-   if(r.vy>0){
-     explode(r.x,r.y);
-     rockets.splice(i,1);
-   }
-
+  if(r.vy>0){
+    explode(r.x,r.y);
+    rockets.splice(i,1);
+  }
  });
 
+ // 불꽃
  sparks.forEach((s,i)=>{
 
-   s.x+=s.vx;
-   s.y+=s.vy;
+  s.x+=s.vx;
+  s.y+=s.vy;
 
-   s.vy+=0.05;
-   s.vx*=0.99;
+  s.vy+=0.03;
+  s.vx*=0.985;
 
-   s.life--;
+  s.life--;
 
-   // 🔥 텍스트 영역이면 skip (마스크 핵심)
-   let ix = (Math.floor(s.y)*canvas.width + Math.floor(s.x))*4;
+  ctx.globalAlpha = s.life/90;
+  ctx.fillStyle=s.color;
 
-   if(textMask && textMask.data[ix+3]>128){
-     return;
-   }
+  ctx.beginPath();
+  ctx.arc(s.x,s.y,2.2,0,Math.PI*2);
+  ctx.fill();
 
-   ctx.globalAlpha=s.life/80;
-   ctx.fillStyle=s.color;
+  ctx.globalAlpha=1;
 
-   ctx.beginPath();
-   ctx.arc(s.x,s.y,2,0,Math.PI*2);
-   ctx.fill();
-
-   ctx.globalAlpha=1;
-
-   if(s.life<=0){
-     sparks.splice(i,1);
-   }
-
+  if(s.life<=0){
+    sparks.splice(i,1);
+  }
  });
 
- // =================
- // ✨ 드론 텍스트 (움직이며 형성)
- // =================
+ // 드론 텍스트 (느리게)
  ctx.fillStyle="#ffffff";
 
  particles.forEach(p=>{
-
-   p.x += (p.tx - p.x)*0.04;
-   p.y += (p.ty - p.y)*0.04;
-
+   p.x += (p.tx - p.x)*0.02;
+   p.y += (p.ty - p.y)*0.02;
    ctx.fillRect(p.x,p.y,2,2);
-
  });
 
  requestAnimationFrame(draw);
+}
+
+// ======================
+function goApp(){
+ location.href="https://play.google.com/store/apps/details?id=com.example.hearmesky";
 }
 
 </script>
