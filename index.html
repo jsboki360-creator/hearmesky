@@ -262,33 +262,38 @@ function drawAurora(){
  const t = Date.now()*0.0005;
 
  ctx.save();
- ctx.globalAlpha = 0.28;
- ctx.filter = "blur(5px)";
 
- const count = 12;
+ // 🔥 더 진하게
+ ctx.globalAlpha = 0.38;
+
+ // 🔥 너무 번지지 않게
+ ctx.filter = "blur(3px)";
+
+ const count = 14;
 
  for(let i=0;i<count;i++){
 
    let baseX = (i/count)*canvas.width;
-   let width = canvas.width/count*1.5;
+   let width = canvas.width/count*1.6;
 
-   let hue = 0 + Math.sin(t + i)*20;
+   // 🔴 붉은 계열 (조금 더 넓게)
+   let hue = 350 + Math.sin(t + i)*25; // red ~ magenta
 
-   let g = ctx.createLinearGradient(baseX,0,baseX,canvas.height*0.6);
+   let g = ctx.createLinearGradient(baseX,0,baseX,canvas.height*0.7);
 
-   g.addColorStop(0,`hsla(${hue},100%,65%,0.25)`);
-   g.addColorStop(0.5,`hsla(${hue+20},100%,55%,0.18)`);
+   g.addColorStop(0,`hsla(${hue},100%,65%,0.35)`);
+   g.addColorStop(0.5,`hsla(${hue+20},100%,55%,0.25)`);
    g.addColorStop(1,"transparent");
 
    ctx.fillStyle = g;
 
    ctx.beginPath();
 
-   for(let y=0;y<canvas.height*0.6;y+=5){
+   for(let y=0;y<canvas.height*0.7;y+=4){
 
      let wave =
-       Math.sin(y*0.01+t*2+i*0.3)*20 +
-       Math.sin(y*0.02+t*1.2+i)*10;
+       Math.sin(y*0.008+t*2+i*0.3)*35 +
+       Math.sin(y*0.02+t*1.5+i)*18;
 
      let x = baseX + wave;
 
@@ -296,11 +301,11 @@ function drawAurora(){
      else ctx.lineTo(x,y);
    }
 
-   for(let y=canvas.height*0.6;y>=0;y-=5){
+   for(let y=canvas.height*0.7;y>=0;y-=4){
 
      let wave =
-       Math.sin(y*0.01+t*2+i*0.3)*20 +
-       Math.sin(y*0.02+t*1.2+i)*10;
+       Math.sin(y*0.008+t*2+i*0.3)*35 +
+       Math.sin(y*0.02+t*1.5+i)*18;
 
      let x = baseX + wave + width;
 
@@ -313,7 +318,6 @@ function drawAurora(){
 
  ctx.restore();
 }
-
 // ================= FIREWORKS (RED) =================
 let rockets=[], sparks=[];
 
