@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 html, body {
@@ -13,39 +13,33 @@ html, body {
   font-family:Arial;
 }
 
-/* 📷 카메라 */
+/* 카메라 */
 video {
   position:fixed;
-  top:0;
-  left:0;
   width:100%;
   height:100%;
   object-fit:cover;
   z-index:0;
 }
 
-/* ✨ 드론 */
+/* 드론 */
 canvas {
   position:fixed;
-  top:0;
-  left:0;
   width:100%;
   height:100%;
   z-index:1;
 }
 
-/* 🔥 인트로 */
+/* 인트로 */
 #intro {
   position:fixed;
-  top:0;
-  left:0;
   width:100%;
   height:100%;
   background:black;
   z-index:50;
   display:flex;
-  align-items:center;
   justify-content:center;
+  align-items:center;
   color:white;
 }
 
@@ -55,15 +49,10 @@ canvas {
 
 .introBox h1 {
   font-size:42px;
-  margin-bottom:10px;
-}
-
-.introBox p {
-  opacity:0.7;
 }
 
 .introBox button {
-  margin-top:25px;
+  margin-top:20px;
   padding:15px 30px;
   font-size:18px;
   border:none;
@@ -72,230 +61,178 @@ canvas {
   color:white;
 }
 
-/* ⏱ 카운트다운 */
+/* 카운트다운 */
 #countdown {
   position:fixed;
   top:50%;
   left:50%;
-  transform:translate(-50%, -50%);
+  transform:translate(-50%,-50%);
   font-size:120px;
   color:white;
   z-index:30;
-  font-weight:bold;
-}
-
-/* 📥 메시지 */
-#msgList {
-  position:fixed;
-  top:15px;
-  right:10px;
-  z-index:20;
-  color:white;
-  font-size:13px;
-  background:rgba(0,0,0,0.5);
-  padding:8px;
-  border-radius:10px;
-  max-width:160px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- 🔥 인트로 -->
 <div id="intro">
   <div class="introBox">
     <h1>HearMeSKY</h1>
-    <p>하늘을 확인하세요</p>
-    <button onclick="enter()">START EXPERIENCE</button>
+    <button onclick="enter()">START</button>
   </div>
 </div>
 
-<!-- 📷 카메라 -->
 <video id="video" autoplay playsinline></video>
-
-<!-- ✨ 드론 -->
 <canvas id="c"></canvas>
-
-<!-- ⏱ -->
 <div id="countdown"></div>
-
-<!-- 📥 -->
-<div id="msgList"></div>
 
 <script>
 
-let started = false;
 let particles = [];
-let streamReady = false;
+let started = false;
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
 function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
 }
 resize();
-window.onresize = resize;
+onresize = resize;
 
-// =======================
-// 📷 카메라
-// =======================
+// ======================
+// 카메라
+// ======================
 async function requestCamera(){
-
-    if(streamReady) return true;
-
     try{
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
+            video:{facingMode:"environment"}
         });
-
-        document.getElementById("video").srcObject = stream;
-        streamReady = true;
-
+        video.srcObject = stream;
         return true;
-
-    }catch(e){
-        alert("카메라 권한 필요");
+    }catch{
+        alert("카메라 필요");
         return false;
     }
 }
 
-// =======================
-// 🚀 시작 흐름
-// =======================
+// ======================
+// 시작
+// ======================
 async function enter(){
-
     const ok = await requestCamera();
     if(!ok) return;
 
-    // 인트로 제거
-    document.getElementById("intro").style.display = "none";
+    intro.style.display = "none";
 
-    // 카운트다운
     await countdown();
 
-    // 쇼 시작
     startShow();
 }
 
-// =======================
-// ⏱ 카운트다운
-// =======================
+// ======================
+// 카운트
+// ======================
 function countdown(){
+    return new Promise(res=>{
+        let c = 3;
+        countdown.innerText = c;
 
-    return new Promise(resolve => {
-
-        const el = document.getElementById("countdown");
-        let count = 3;
-
-        el.innerText = count;
-
-        const timer = setInterval(() => {
-
-            count--;
-
-            if(count > 0){
-                el.innerText = count;
+        const t = setInterval(()=>{
+            c--;
+            if(c>0){
+                countdown.innerText = c;
             }else{
-                el.innerText = "";
-                clearInterval(timer);
-                resolve();
+                countdown.innerText = "";
+                clearInterval(t);
+                res();
             }
-
-        }, 1000);
+        },1000);
     });
 }
 
-// =======================
-// 🎉 쇼 시작
-// =======================
-function startShow(){
-
-    initParticles(text);
-    started = true;
-    draw();
-}
-
-// =======================
-// 💬 메시지
-// =======================
+// ======================
+// 메시지
+// ======================
 const params = new URLSearchParams(location.search);
-const text = params.get("msg") || "We Love Gina";
+let text = params.get("msg") || "WE LOVE YOU";
 
-function saveMessage(msg){
-    let list = JSON.parse(localStorage.getItem("msgs") || "[]");
-
-    list.push({
-        text: msg,
-        time: Date.now(),
-        ttl: 60000
-    });
-
-    localStorage.setItem("msgs", JSON.stringify(list));
+// 🔥 너무 길면 자르기
+if(text.length > 50){
+    text = text.substring(0,50) + "...";
 }
 
-function drawList(){
+// ======================
+// 🔥 자동 줄바꿈
+// ======================
+function drawMultiline(ctx, text, x, y, maxWidth, lineHeight){
 
-    const listDiv = document.getElementById("msgList");
+    const words = text.split("_"); // URL용 _
+    let line = "";
+    let lines = [];
 
-    let list = JSON.parse(localStorage.getItem("msgs") || "[]");
-    let now = Date.now();
+    for(let i=0;i<words.length;i++){
+        let test = line + words[i] + " ";
+        let w = ctx.measureText(test).width;
 
-    list = list.filter(m => now - m.time < m.ttl);
-    localStorage.setItem("msgs", JSON.stringify(list));
+        if(w > maxWidth && i>0){
+            lines.push(line);
+            line = words[i] + " ";
+        }else{
+            line = test;
+        }
+    }
+    lines.push(line);
 
-    listDiv.innerHTML = "";
+    // 🔥 최대 3줄 제한
+    lines = lines.slice(0,3);
 
-    list.forEach(m => {
+    let startY = y - (lines.length * lineHeight)/2;
 
-        let remain = Math.floor((m.ttl - (now - m.time)) / 1000);
-
-        const div = document.createElement("div");
-        div.innerHTML = `${m.text} (${remain}s)`;
-
-        div.onclick = () => {
-            initParticles(m.text);
-        };
-
-        listDiv.appendChild(div);
+    lines.forEach((l,i)=>{
+        ctx.fillText(l.trim(), x, startY + i*lineHeight);
     });
 }
 
-setInterval(drawList, 1000);
-
-// =======================
-// ✨ 텍스트 → 입자
-// =======================
-function initParticles(customText){
+// ======================
+// 입자 생성
+// ======================
+function initParticles(txt){
 
     const off = document.createElement("canvas");
-    const offCtx = off.getContext("2d");
+    const o = off.getContext("2d");
 
     off.width = canvas.width;
     off.height = canvas.height;
 
-    offCtx.fillStyle = "white";
+    let size = Math.min(canvas.width/8, canvas.height/5);
 
-    let fontSize = Math.min(canvas.width / 7, canvas.height / 4);
+    o.fillStyle="white";
+    o.font = `bold ${size}px Arial`;
+    o.textAlign="center";
+    o.textBaseline="middle";
 
-    offCtx.font = `bold ${fontSize}px Arial`;
-    offCtx.textAlign = "center";
-    offCtx.textBaseline = "middle";
+    drawMultiline(
+        o,
+        txt,
+        canvas.width/2,
+        canvas.height/2,
+        canvas.width*0.8,
+        size*1.3
+    );
 
-    offCtx.fillText(customText, canvas.width/2, canvas.height/2);
-
-    const imgData = offCtx.getImageData(0,0,off.width,off.height);
+    const img = o.getImageData(0,0,off.width,off.height);
 
     particles = [];
 
     for(let y=0;y<off.height;y+=6){
         for(let x=0;x<off.width;x+=6){
 
-            let i = (y * off.width + x) * 4;
+            let i = (y*off.width+x)*4;
 
-            if(imgData.data[i+3] > 128){
+            if(img.data[i+3] > 128){
                 particles.push({
                     x: Math.random()*canvas.width,
                     y: Math.random()*canvas.height,
@@ -307,9 +244,18 @@ function initParticles(customText){
     }
 }
 
-// =======================
-// 🎬 애니메이션
-// =======================
+// ======================
+// 쇼 시작
+// ======================
+function startShow(){
+    initParticles(text);
+    started = true;
+    draw();
+}
+
+// ======================
+// 애니메이션
+// ======================
 function draw(){
 
     if(!started) return;
@@ -319,7 +265,6 @@ function draw(){
     ctx.fillStyle="white";
 
     particles.forEach(p=>{
-
         p.x += (p.tx - p.x)*0.05;
         p.y += (p.ty - p.y)*0.05;
 
@@ -331,10 +276,6 @@ function draw(){
     requestAnimationFrame(draw);
 }
 
-// 초기 저장
-saveMessage(text);
-
 </script>
-
 </body>
 </html>
