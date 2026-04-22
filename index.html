@@ -2,7 +2,6 @@
 <html>
 <head>
 <meta charset="utf-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
 <style>
@@ -45,23 +44,36 @@ canvas {
   border:none;
 }
 
-/* 📷 카메라 */
-.camBtn {
-  left:30%;
+/* START 버튼 */
+.startBtn {
+  left:50%;
   transform:translateX(-50%);
-  background:black;
-  color:red;
+  background:red;
+  color:white;
+  font-size:22px;
 }
 
 /* 📱 앱 */
 .appBtn {
-  left:70%;
+  left:85%;
   transform:translateX(-50%);
-  background:red;
-  color:white;
+  background:white;
+  color:black;
 }
 
-/* 📥 메시지 리스트 */
+/* ⏱ 카운트다운 */
+#countdown {
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  font-size:120px;
+  color:white;
+  z-index:30;
+  font-weight:bold;
+}
+
+/* 📥 메시지 */
 #msgList {
   position:fixed;
   top:15px;
@@ -83,15 +95,17 @@ canvas {
 <video id="video" autoplay playsinline></video>
 <canvas id="c"></canvas>
 
-<button class="btn camBtn" onclick="startCamera()">📷 Camera</button>
-<button class="btn appBtn" onclick="installApp()">📱 App</button>
+<button class="btn startBtn" onclick="startFlow()">START</button>
+<button class="btn appBtn" onclick="installApp()">📱</button>
 
+<div id="countdown"></div>
 <div id="msgList"></div>
 
 <script>
 
 let started = false;
 let particles = [];
+let streamReady = false;
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -104,11 +118,11 @@ resize();
 window.onresize = resize;
 
 // =======================
-// 📷 카메라
+// 📷 카메라 권한
 // =======================
-async function startCamera(){
+async function requestCamera(){
 
-    if(started) return;
+    if(streamReady) return true;
 
     try{
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -116,14 +130,70 @@ async function startCamera(){
         });
 
         document.getElementById("video").srcObject = stream;
+        streamReady = true;
 
-        initParticles(text);
-        started = true;
-        draw();
+        return true;
 
     }catch(e){
-        alert("카메라 실행 실패");
+        alert("카메라 권한 필요");
+        return false;
     }
+}
+
+// =======================
+// 🎬 전체 흐름
+// =======================
+async function startFlow(){
+
+    if(started) return;
+
+    // 1️⃣ 카메라 먼저 허용
+    const ok = await requestCamera();
+    if(!ok) return;
+
+    // 2️⃣ 카운트다운
+    await countdown();
+
+    // 3️⃣ 쇼 시작
+    startShow();
+}
+
+// =======================
+// ⏱ 카운트다운
+// =======================
+function countdown(){
+
+    return new Promise(resolve => {
+
+        const el = document.getElementById("countdown");
+        let count = 3;
+
+        el.innerText = count;
+
+        const timer = setInterval(() => {
+
+            count--;
+
+            if(count > 0){
+                el.innerText = count;
+            }else{
+                el.innerText = "";
+                clearInterval(timer);
+                resolve();
+            }
+
+        }, 1000);
+    });
+}
+
+// =======================
+// 🎉 쇼 시작
+// =======================
+function startShow(){
+
+    initParticles(text);
+    started = true;
+    draw();
 }
 
 // =======================
@@ -182,7 +252,7 @@ function drawList(){
 setInterval(drawList, 1000);
 
 // =======================
-// ✨ 텍스트 → 입자 (🔥 핵심 수정)
+// ✨ 텍스트 → 입자
 // =======================
 function initParticles(customText){
 
@@ -194,7 +264,6 @@ function initParticles(customText){
 
     offCtx.fillStyle = "white";
 
-    // 🔥 화면 맞춤 폰트
     let fontSize = Math.min(canvas.width / 7, canvas.height / 4);
 
     offCtx.font = `bold ${fontSize}px Arial`;
