@@ -33,6 +33,7 @@ height:100%;
 z-index:1;
 }
 
+/* START UI */
 #intro{
 position:fixed;
 width:100%;
@@ -109,8 +110,7 @@ onresize=resize;
 
 let streamRef;
 
-// ================= TEXT =================
-
+// ================= COMMON =================
 function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
  let words=text.split(" "), line="", lines=[];
  for(let w of words){
@@ -128,7 +128,7 @@ function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
  });
 }
 
-// ---------- STANDARD ----------
+// ================= STANDARD =================
 function drawStandard(){
  ctx.fillStyle="#ffffff";
  ctx.font="bold 48px Arial";
@@ -137,11 +137,10 @@ function drawStandard(){
  drawMultiline(ctx,text,canvas.width/2,canvas.height/2,canvas.width*0.8,60);
 }
 
-// ---------- CLOUD ----------
+// ================= CLOUD =================
 let cloudParticles=[];
 
 function initCloud(){
-
  const off=document.createElement("canvas");
  const o=off.getContext("2d");
 
@@ -163,31 +162,25 @@ function initCloud(){
 
  for(let y=0;y<off.height;y+=6){
   for(let x=0;x<off.width;x+=6){
-
     let i=(y*off.width+x)*4;
-
     if(img.data[i+3]>128 && Math.random()<0.25){
-
       cloudParticles.push({
         x:x,
         y:y,
         r:Math.random()*2+1,
         a:Math.random()*0.2+0.1
       });
-
     }
   }
  }
 }
 
 function drawCloud(){
-
  ctx.shadowBlur=6;
  ctx.shadowColor="white";
 
  cloudParticles.forEach(p=>{
    let drift=Math.sin(Date.now()*0.001+p.y)*2;
-
    ctx.globalAlpha=p.a;
    ctx.beginPath();
    ctx.arc(p.x+drift,p.y,p.r,0,Math.PI*2);
@@ -199,11 +192,10 @@ function drawCloud(){
  ctx.shadowBlur=0;
 }
 
-// ---------- DRONE ----------
+// ================= DRONE LED =================
 let droneParticles=[];
 
 function initDrone(){
-
  const off=document.createElement("canvas");
  const o=off.getContext("2d");
 
@@ -225,18 +217,14 @@ function initDrone(){
 
  for(let y=0;y<off.height;y+=6){
   for(let x=0;x<off.width;x+=6){
-
     let i=(y*off.width+x)*4;
-
     if(img.data[i+3]>128){
-
       droneParticles.push({
         x:Math.random()*canvas.width,
         y:Math.random()*canvas.height,
         tx:x,
         ty:y
       });
-
     }
   }
  }
@@ -244,18 +232,31 @@ function initDrone(){
 
 function drawDrone(){
 
- ctx.fillStyle="#ffffff";
+ ctx.save();
+ ctx.shadowBlur = 10;
+ ctx.shadowColor = "#66ccff";
 
- droneParticles.forEach(p=>{
-   p.x += (p.tx - p.x)*0.05;
-   p.y += (p.ty - p.y)*0.05;
-   ctx.fillRect(p.x,p.y,2,2);
+ droneParticles.forEach((p,i)=>{
+
+   p.x += (p.tx - p.x)*0.04;
+   p.y += (p.ty - p.y)*0.04;
+
+   let flicker = 0.7 + Math.sin(Date.now()*0.01 + i)*0.3;
+   ctx.globalAlpha = flicker;
+
+   let hue = 200 + Math.sin(i*0.1)*20;
+   ctx.fillStyle = `hsl(${hue},100%,70%)`;
+
+   ctx.beginPath();
+   ctx.arc(p.x, p.y, 1.8, 0, Math.PI*2);
+   ctx.fill();
+
  });
+
+ ctx.restore();
 }
 
-// ================= EFFECT =================
-
-// ---------- AURORA ----------
+// ================= AURORA =================
 function drawAurora(){
 
  const t = Date.now()*0.0005;
@@ -284,25 +285,21 @@ function drawAurora(){
    ctx.beginPath();
 
    for(let y=0;y<canvas.height*0.6;y+=5){
-
      let wave =
        Math.sin(y*0.01+t*2+i*0.3)*20 +
        Math.sin(y*0.02+t*1.2+i)*10;
 
      let x=baseX+wave;
-
      if(y===0) ctx.moveTo(x,y);
      else ctx.lineTo(x,y);
    }
 
    for(let y=canvas.height*0.6;y>=0;y-=5){
-
      let wave =
        Math.sin(y*0.01+t*2+i*0.3)*20 +
        Math.sin(y*0.02+t*1.2+i)*10;
 
      let x=baseX+wave+width;
-
      ctx.lineTo(x,y);
    }
 
@@ -313,7 +310,7 @@ function drawAurora(){
  ctx.restore();
 }
 
-// ---------- FIREWORKS ----------
+// ================= FIREWORKS =================
 let rockets=[], sparks=[];
 
 function launchRocket(){
@@ -392,7 +389,6 @@ async function start(){
 
  await countdown();
 
- // TEXT INIT
  if(txtStyle==="cloud") initCloud();
  if(txtStyle==="drone") initDrone();
 
@@ -414,10 +410,14 @@ function countdown(){
 // ================= DRAW =================
 function draw(){
 
- ctx.globalCompositeOperation="destination-out";
- ctx.fillStyle="rgba(0,0,0,0.015)";
- ctx.fillRect(0,0,canvas.width,canvas.height);
- ctx.globalCompositeOperation="source-over";
+ if(txtStyle==="drone"){
+   ctx.clearRect(0,0,canvas.width,canvas.height);
+ }else{
+   ctx.globalCompositeOperation="destination-out";
+   ctx.fillStyle="rgba(0,0,0,0.015)";
+   ctx.fillRect(0,0,canvas.width,canvas.height);
+   ctx.globalCompositeOperation="source-over";
+ }
 
  // EFFECT
  if(effStyle==="aurora") drawAurora();
