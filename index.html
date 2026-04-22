@@ -13,26 +13,29 @@ html, body {
   font-family:Arial;
 }
 
-/* 카메라 */
 video {
   position:fixed;
+  top:0;
+  left:0;
   width:100%;
   height:100%;
   object-fit:cover;
   z-index:0;
 }
 
-/* 드론 */
 canvas {
   position:fixed;
+  top:0;
+  left:0;
   width:100%;
   height:100%;
   z-index:1;
 }
 
-/* 인트로 */
 #intro {
   position:fixed;
+  top:0;
+  left:0;
   width:100%;
   height:100%;
   background:black;
@@ -49,6 +52,12 @@ canvas {
 
 .introBox h1 {
   font-size:42px;
+  margin-bottom:10px;
+}
+
+.introBox p {
+  opacity:0.75;
+  margin-bottom:20px;
 }
 
 .introBox button {
@@ -61,15 +70,17 @@ canvas {
   color:white;
 }
 
-/* 카운트다운 */
-#countdown {
+#countdownText {
   position:fixed;
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
   font-size:120px;
+  font-weight:bold;
   color:white;
   z-index:30;
+  text-shadow:0 0 18px rgba(255,255,255,0.35);
+  pointer-events:none;
 }
 </style>
 </head>
@@ -79,163 +90,155 @@ canvas {
 <div id="intro">
   <div class="introBox">
     <h1>HearMeSKY</h1>
+    <p>하늘을 확인하세요</p>
     <button onclick="enter()">START</button>
   </div>
 </div>
 
-<video id="video" autoplay playsinline></video>
+<video id="video" autoplay playsinline muted></video>
 <canvas id="c"></canvas>
-<div id="countdown"></div>
+<div id="countdownText"></div>
 
 <script>
-
 let particles = [];
 let started = false;
+let streamReady = false;
 
+const video = document.getElementById("video");
+const intro = document.getElementById("intro");
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
 function resize(){
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
 resize();
-onresize = resize;
+window.onresize = resize;
 
-// ======================
 // 카메라
-// ======================
 async function requestCamera(){
+    if (streamReady) return true;
+
     try{
         const stream = await navigator.mediaDevices.getUserMedia({
-            video:{facingMode:"environment"}
+            video:{ facingMode:"environment" },
+            audio:false
         });
         video.srcObject = stream;
+        streamReady = true;
         return true;
-    }catch{
-        alert("카메라 필요");
+    }catch(e){
+        alert("카메라 권한이 필요합니다.");
         return false;
     }
 }
 
-// ======================
 // 시작
-// ======================
 async function enter(){
     const ok = await requestCamera();
     if(!ok) return;
 
     intro.style.display = "none";
 
-    await countdown();
+    await runCountdown();
 
     startShow();
 }
 
-// ======================
-// 카운트
-// ======================
-function countdown(){
+// 카운트다운
+function runCountdown(){
     return new Promise(res=>{
+        const el = document.getElementById("countdownText");
         let c = 3;
-        countdown.innerText = c;
+        el.innerText = c;
 
         const t = setInterval(()=>{
             c--;
-            if(c>0){
-                countdown.innerText = c;
+
+            if(c > 0){
+                el.innerText = c;
             }else{
-                countdown.innerText = "";
+                el.innerText = "";
                 clearInterval(t);
                 res();
             }
-        },1000);
+        }, 1000);
     });
 }
 
-// ======================
 // 메시지
-// ======================
 const params = new URLSearchParams(location.search);
 let text = params.get("msg") || "WE LOVE YOU";
+text = text.replaceAll("_", " ");
 
-// 🔥 너무 길면 자르기
 if(text.length > 50){
-    text = text.substring(0,50) + "...";
+    text = text.substring(0, 50) + "...";
 }
 
-// ======================
-// 🔥 자동 줄바꿈
-// ======================
+// 자동 줄바꿈
 function drawMultiline(ctx, text, x, y, maxWidth, lineHeight){
-
-    const words = text.split("_"); // URL용 _
+    const words = text.split(" ");
     let line = "";
     let lines = [];
 
-    for(let i=0;i<words.length;i++){
-        let test = line + words[i] + " ";
-        let w = ctx.measureText(test).width;
+    for(let i=0; i<words.length; i++){
+        const test = line + words[i] + " ";
+        const w = ctx.measureText(test).width;
 
-        if(w > maxWidth && i>0){
-            lines.push(line);
+        if(w > maxWidth && i > 0){
+            lines.push(line.trim());
             line = words[i] + " ";
         }else{
             line = test;
         }
     }
-    lines.push(line);
 
-    // 🔥 최대 3줄 제한
-    lines = lines.slice(0,3);
+    if(line.trim()) lines.push(line.trim());
 
-    let startY = y - (lines.length * lineHeight)/2;
+    lines = lines.slice(0, 3);
 
-    lines.forEach((l,i)=>{
-        ctx.fillText(l.trim(), x, startY + i*lineHeight);
+    const startY = y - ((lines.length - 1) * lineHeight / 2);
+
+    lines.forEach((l, i)=>{
+        ctx.fillText(l, x, startY + i * lineHeight);
     });
 }
 
-// ======================
 // 입자 생성
-// ======================
 function initParticles(txt){
-
     const off = document.createElement("canvas");
     const o = off.getContext("2d");
 
     off.width = canvas.width;
     off.height = canvas.height;
 
-    let size = Math.min(canvas.width/8, canvas.height/5);
-
-    o.fillStyle="white";
+    let size = Math.min(canvas.width / 8, canvas.height / 5);
+    o.fillStyle = "white";
     o.font = `bold ${size}px Arial`;
-    o.textAlign="center";
-    o.textBaseline="middle";
+    o.textAlign = "center";
+    o.textBaseline = "middle";
 
     drawMultiline(
         o,
         txt,
-        canvas.width/2,
-        canvas.height/2,
-        canvas.width*0.8,
-        size*1.3
+        canvas.width / 2,
+        canvas.height / 2,
+        canvas.width * 0.8,
+        size * 1.3
     );
 
-    const img = o.getImageData(0,0,off.width,off.height);
-
+    const img = o.getImageData(0, 0, off.width, off.height);
     particles = [];
 
-    for(let y=0;y<off.height;y+=6){
-        for(let x=0;x<off.width;x+=6){
-
-            let i = (y*off.width+x)*4;
+    for(let y=0; y<off.height; y+=6){
+        for(let x=0; x<off.width; x+=6){
+            const i = (y * off.width + x) * 4;
 
             if(img.data[i+3] > 128){
                 particles.push({
-                    x: Math.random()*canvas.width,
-                    y: Math.random()*canvas.height,
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
                     tx: x,
                     ty: y
                 });
@@ -244,38 +247,32 @@ function initParticles(txt){
     }
 }
 
-// ======================
 // 쇼 시작
-// ======================
 function startShow(){
     initParticles(text);
     started = true;
     draw();
 }
 
-// ======================
 // 애니메이션
-// ======================
 function draw(){
-
     if(!started) return;
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    ctx.fillStyle="white";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "white";
 
     particles.forEach(p=>{
-        p.x += (p.tx - p.x)*0.05;
-        p.y += (p.ty - p.y)*0.05;
+        p.x += (p.tx - p.x) * 0.05;
+        p.y += (p.ty - p.y) * 0.05;
 
         ctx.beginPath();
-        ctx.arc(p.x,p.y,2,0,Math.PI*2);
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
         ctx.fill();
     });
 
     requestAnimationFrame(draw);
 }
-
 </script>
+
 </body>
 </html>
