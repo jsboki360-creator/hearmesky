@@ -143,7 +143,6 @@ function initCloud(){
 
  cloudLayers = [];
 
- // 🔥 1. 원본 텍스트 캔버스
  const base = document.createElement("canvas");
  const ctxBase = base.getContext("2d");
 
@@ -164,24 +163,46 @@ function initCloud(){
    size*1.2
  );
 
- // 🔥 2. 여러 blur 레이어 생성 (핵심)
- for(let i=0;i<4;i++){
+ // 🔥 1️⃣ 중심 (가독성 핵심)
+ const core = document.createElement("canvas");
+ const cctx = core.getContext("2d");
 
-   const layer = document.createElement("canvas");
-   const lctx = layer.getContext("2d");
+ core.width = canvas.width;
+ core.height = canvas.height;
 
-   layer.width = canvas.width;
-   layer.height = canvas.height;
+ cctx.globalAlpha = 0.9;
+ cctx.filter = "blur(2px)";  // 거의 선명
+ cctx.drawImage(base,0,0);
 
-   lctx.globalAlpha = 0.5 - i*0.1;
-   lctx.filter = `blur(${10 + i*8}px)`;
+ cloudLayers.push(core);
 
-   // 🔥 여기 중요: base를 그림 (off 아님)
-   lctx.drawImage(base,0,0);
+ // 🔥 2️⃣ 중간층
+ const mid = document.createElement("canvas");
+ const mctx = mid.getContext("2d");
 
-   cloudLayers.push(layer);
- }
+ mid.width = canvas.width;
+ mid.height = canvas.height;
+
+ mctx.globalAlpha = 0.5;
+ mctx.filter = "blur(10px)";
+ mctx.drawImage(base,0,0);
+
+ cloudLayers.push(mid);
+
+ // 🔥 3️⃣ 외곽 구름
+ const outer = document.createElement("canvas");
+ const octx = outer.getContext("2d");
+
+ outer.width = canvas.width;
+ outer.height = canvas.height;
+
+ octx.globalAlpha = 0.25;
+ octx.filter = "blur(22px)";
+ octx.drawImage(base,0,0);
+
+ cloudLayers.push(outer);
 }
+
 
 function drawCloud(){
 
@@ -191,17 +212,16 @@ function drawCloud(){
 
  cloudLayers.forEach((layer,i)=>{
 
-   let driftX = Math.sin(t + i)*6*(i+1)*0.2;
-   let driftY = Math.cos(t*0.6 + i)*3;
+   let driftX = Math.sin(t + i)*4*i;
+   let driftY = Math.cos(t*0.5 + i)*2*i;
 
-   ctx.globalAlpha = 1 - i*0.25;
+   ctx.globalAlpha = 1 - i*0.2;
 
    ctx.drawImage(layer, driftX, driftY);
  });
 
  ctx.restore();
 }
-
 
 // ---------- DRONE ----------
 let droneParticles=[];
