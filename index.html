@@ -137,73 +137,89 @@ function drawStandard(){
 }
 
 // ---------- CLOUD (이미지 방식) ----------
-let cloudImage;
+let cloudPuffs = [];
 
 function initCloud(){
 
- const base = document.createElement("canvas");
- const bctx = base.getContext("2d");
+ cloudPuffs = [];
 
- base.width = canvas.width;
- base.height = canvas.height;
+ const off = document.createElement("canvas");
+ const o = off.getContext("2d");
+
+ off.width = canvas.width;
+ off.height = canvas.height;
 
  let size = Math.min(canvas.width/6, canvas.height/4);
 
- // 🔥 1. 텍스트 먼저 그림 (핵심)
- bctx.fillStyle="white";
- bctx.font=`bold ${size}px Arial`;
- bctx.textAlign="center";
- bctx.textBaseline="middle";
+ // 🔥 텍스트 찍기 (마스크용)
+ o.fillStyle="white";
+ o.font=`bold ${size}px Arial`;
+ o.textAlign="center";
+ o.textBaseline="middle";
 
- drawMultiline(bctx,text,
+ drawMultiline(o,text,
    canvas.width/2,
    canvas.height/2,
    canvas.width*0.8,
    size*1.2
  );
 
- // 🔥 2. 구름 텍스처 생성
- const noiseCanvas = document.createElement("canvas");
- const nctx = noiseCanvas.getContext("2d");
+ const img = o.getImageData(0,0,off.width,off.height);
 
- noiseCanvas.width = canvas.width;
- noiseCanvas.height = canvas.height;
+ // 🔥 텍스트 픽셀을 구름으로 변환
+ for(let y=0;y<off.height;y+=6){
+  for(let x=0;x<off.width;x+=6){
 
- const noise = nctx.createImageData(noiseCanvas.width, noiseCanvas.height);
+    let i=(y*off.width+x)*4;
 
- for(let i=0;i<noise.data.length;i+=4){
-   let v = Math.random()*255;
-   noise.data[i]=v;
-   noise.data[i+1]=v;
-   noise.data[i+2]=v;
-   noise.data[i+3]=255;
+    if(img.data[i+3] > 128){
+
+      // 🔥 구름 덩어리 생성
+      cloudPuffs.push({
+        x:x,
+        y:y,
+        r:Math.random()*8 + 6,
+        dx:Math.random()*0.5,
+        dy:Math.random()*0.3,
+        alpha:Math.random()*0.5 + 0.5
+      });
+
+    }
+  }
  }
-
- nctx.putImageData(noise,0,0);
-
- // 🔥 blur → 구름 느낌
- nctx.filter = "blur(20px)";
- nctx.drawImage(noiseCanvas,0,0);
-
- // 🔥 3. 텍스트 위에만 구름 적용
- bctx.globalCompositeOperation = "source-in";
- bctx.drawImage(noiseCanvas,0,0);
-
- cloudImage = base;
 }
-
 
 function drawCloud(){
 
- const t = Date.now()*0.0002;
+ ctx.save();
 
- let driftX = Math.sin(t)*8;
- let driftY = Math.cos(t*0.6)*4;
+ cloudPuffs.forEach(p=>{
 
- ctx.globalAlpha = 0.95;
+   // 🔥 부드러운 이동 (구름 흐름)
+   p.x += p.dx;
+   p.y -= p.dy;
 
- ctx.drawImage(cloudImage, driftX, driftY);
+   // 🔥 원형 대신 "부드러운 구름"
+   let g = ctx.createRadialGradient(
+     p.x, p.y, 0,
+     p.x, p.y, p.r
+   );
+
+   g.addColorStop(0, `rgba(255,255,255,${p.alpha})`);
+   g.addColorStop(1, "rgba(255,255,255,0)");
+
+   ctx.fillStyle = g;
+
+   ctx.beginPath();
+   ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+   ctx.fill();
+
+ });
+
+ ctx.restore();
 }
+
+
 
 // ---------- DRONE ----------
 let droneParticles=[];
