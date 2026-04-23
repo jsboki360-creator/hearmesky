@@ -167,7 +167,7 @@ function initCloud(){
  blurCanvas.width = canvas.width;
  blurCanvas.height = canvas.height;
 
- blurCtx.filter = "blur(30px)";
+ blurCtx.filter = "blur(18px)";
  blurCtx.drawImage(noiseCanvas,0,0);
 
  // 🔥 3. 텍스트 마스크
@@ -175,8 +175,12 @@ function initCloud(){
 
  let size = Math.min(canvas.width/6, canvas.height/4);
 
- blurCtx.fillStyle="white";
- blurCtx.font=`bold ${size}px Arial`;
+// 🔥 핵심: 마스크를 진하게
+blurCtx.fillStyle="rgba(255,255,255,1.0)";
+blurCtx.shadowBlur = 10;
+blurCtx.shadowColor = "white";
+
+blurCtx.font=`bold ${size}px Arial`;
  blurCtx.textAlign="center";
  blurCtx.textBaseline="middle";
 
