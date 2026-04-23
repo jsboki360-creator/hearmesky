@@ -141,50 +141,55 @@ let cloudImage;
 
 function initCloud(){
 
- const off = document.createElement("canvas");
- const ctxOff = off.getContext("2d");
+ const noiseCanvas = document.createElement("canvas");
+ const noiseCtx = noiseCanvas.getContext("2d");
 
- off.width = canvas.width;
- off.height = canvas.height;
+ noiseCanvas.width = canvas.width;
+ noiseCanvas.height = canvas.height;
 
- // 🔥 1. 구름 노이즈 생성
- const noise = ctxOff.createImageData(off.width, off.height);
+ // 🔥 1. 노이즈 생성
+ const noise = noiseCtx.createImageData(noiseCanvas.width, noiseCanvas.height);
 
  for(let i=0;i<noise.data.length;i+=4){
-
    let v = Math.random()*255;
-
    noise.data[i] = v;
    noise.data[i+1] = v;
    noise.data[i+2] = v;
    noise.data[i+3] = 255;
  }
 
- ctxOff.putImageData(noise,0,0);
+ noiseCtx.putImageData(noise,0,0);
 
- // 🔥 blur → 구름화
- ctxOff.filter = "blur(25px)";
- ctxOff.drawImage(off,0,0);
+ // 🔥 2. blur용 캔버스 따로 생성 (중요)
+ const blurCanvas = document.createElement("canvas");
+ const blurCtx = blurCanvas.getContext("2d");
 
- // 🔥 2. 텍스트 마스크
- ctxOff.globalCompositeOperation = "destination-in";
+ blurCanvas.width = canvas.width;
+ blurCanvas.height = canvas.height;
+
+ blurCtx.filter = "blur(30px)";
+ blurCtx.drawImage(noiseCanvas,0,0);
+
+ // 🔥 3. 텍스트 마스크
+ blurCtx.globalCompositeOperation = "destination-in";
 
  let size = Math.min(canvas.width/6, canvas.height/4);
 
- ctxOff.fillStyle="white";
- ctxOff.font=`bold ${size}px Arial`;
- ctxOff.textAlign="center";
- ctxOff.textBaseline="middle";
+ blurCtx.fillStyle="white";
+ blurCtx.font=`bold ${size}px Arial`;
+ blurCtx.textAlign="center";
+ blurCtx.textBaseline="middle";
 
- drawMultiline(ctxOff,text,
+ drawMultiline(blurCtx,text,
    canvas.width/2,
    canvas.height/2,
    canvas.width*0.8,
    size*1.2
  );
 
- cloudImage = off;
+ cloudImage = blurCanvas;
 }
+
 
 
 function drawCloud(){
