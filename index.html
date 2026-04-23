@@ -137,91 +137,68 @@ function drawStandard(){
 }
 
 // ---------- CLOUD (이미지 방식) ----------
-let cloudLayers = [];
+let cloudImage;
 
 function initCloud(){
 
- cloudLayers = [];
+ const off = document.createElement("canvas");
+ const ctxOff = off.getContext("2d");
 
- const base = document.createElement("canvas");
- const ctxBase = base.getContext("2d");
+ off.width = canvas.width;
+ off.height = canvas.height;
 
- base.width = canvas.width;
- base.height = canvas.height;
+ // 🔥 1. 구름 노이즈 생성
+ const noise = ctxOff.createImageData(off.width, off.height);
+
+ for(let i=0;i<noise.data.length;i+=4){
+
+   let v = Math.random()*255;
+
+   noise.data[i] = v;
+   noise.data[i+1] = v;
+   noise.data[i+2] = v;
+   noise.data[i+3] = 255;
+ }
+
+ ctxOff.putImageData(noise,0,0);
+
+ // 🔥 blur → 구름화
+ ctxOff.filter = "blur(25px)";
+ ctxOff.drawImage(off,0,0);
+
+ // 🔥 2. 텍스트 마스크
+ ctxOff.globalCompositeOperation = "destination-in";
 
  let size = Math.min(canvas.width/6, canvas.height/4);
 
- ctxBase.fillStyle="white";
- ctxBase.font=`bold ${size}px Arial`;
- ctxBase.textAlign="center";
- ctxBase.textBaseline="middle";
+ ctxOff.fillStyle="white";
+ ctxOff.font=`bold ${size}px Arial`;
+ ctxOff.textAlign="center";
+ ctxOff.textBaseline="middle";
 
- drawMultiline(ctxBase, text,
+ drawMultiline(ctxOff,text,
    canvas.width/2,
    canvas.height/2,
    canvas.width*0.8,
    size*1.2
  );
 
- // 🔥 1️⃣ 중심 (가독성 핵심)
- const core = document.createElement("canvas");
- const cctx = core.getContext("2d");
-
- core.width = canvas.width;
- core.height = canvas.height;
-
- cctx.globalAlpha = 0.9;
- cctx.filter = "blur(2px)";  // 거의 선명
- cctx.drawImage(base,0,0);
-
- cloudLayers.push(core);
-
- // 🔥 2️⃣ 중간층
- const mid = document.createElement("canvas");
- const mctx = mid.getContext("2d");
-
- mid.width = canvas.width;
- mid.height = canvas.height;
-
- mctx.globalAlpha = 0.5;
- mctx.filter = "blur(10px)";
- mctx.drawImage(base,0,0);
-
- cloudLayers.push(mid);
-
- // 🔥 3️⃣ 외곽 구름
- const outer = document.createElement("canvas");
- const octx = outer.getContext("2d");
-
- outer.width = canvas.width;
- outer.height = canvas.height;
-
- octx.globalAlpha = 0.25;
- octx.filter = "blur(22px)";
- octx.drawImage(base,0,0);
-
- cloudLayers.push(outer);
+ cloudImage = off;
 }
 
 
 function drawCloud(){
 
- ctx.save();
+ const t = Date.now()*0.0002;
 
- const t = Date.now()*0.0003;
+ let driftX = Math.sin(t)*10;
+ let driftY = Math.cos(t*0.6)*5;
 
- cloudLayers.forEach((layer,i)=>{
+ ctx.globalAlpha = 0.9;
 
-   let driftX = Math.sin(t + i)*4*i;
-   let driftY = Math.cos(t*0.5 + i)*2*i;
-
-   ctx.globalAlpha = 1 - i*0.2;
-
-   ctx.drawImage(layer, driftX, driftY);
- });
-
- ctx.restore();
+ ctx.drawImage(cloudImage, driftX, driftY);
 }
+
 
 // ---------- DRONE ----------
 let droneParticles=[];
