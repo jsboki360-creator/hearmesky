@@ -137,40 +137,68 @@ function drawStandard(){
 }
 
 // ---------- CLOUD (이미지 방식) ----------
-let cloudImage;
+let cloudLayers = [];
 
 function initCloud(){
 
- const off=document.createElement("canvas");
- const o=off.getContext("2d");
+ cloudLayers = [];
 
- off.width=canvas.width;
- off.height=canvas.height;
+ const base = document.createElement("canvas");
+ const ctxBase = base.getContext("2d");
 
- let size=Math.min(canvas.width/6,canvas.height/4);
+ base.width = canvas.width;
+ base.height = canvas.height;
 
- o.fillStyle="white";
- o.font=`bold ${size}px Arial`;
- o.textAlign="center";
- o.textBaseline="middle";
+ let size = Math.min(canvas.width/6, canvas.height/4);
 
- drawMultiline(o,text,canvas.width/2,canvas.height/2,canvas.width*0.8,size*1.2);
+ ctxBase.fillStyle="white";
+ ctxBase.font=`bold ${size}px Arial`;
+ ctxBase.textAlign="center";
+ ctxBase.textBaseline="middle";
 
- // blur → 구름
- o.filter="blur(18px)";
- o.drawImage(off,0,0);
+ drawMultiline(ctxBase, text,
+   canvas.width/2,
+   canvas.height/2,
+   canvas.width*0.8,
+   size*1.2
+ );
 
- cloudImage = off;
+ // 🔥 여러 레이어 생성 (핵심)
+ for(let i=0;i<4;i++){
+
+   const layer = document.createElement("canvas");
+   const lctx = layer.getContext("2d");
+
+   layer.width = canvas.width;
+   layer.height = canvas.height;
+
+   lctx.globalAlpha = 0.4 - i*0.08; // 점점 약하게
+   lctx.filter = `blur(${12 + i*6}px)`; // 점점 퍼짐
+
+   lctx.drawImage(base,0,0);
+
+   cloudLayers.push(layer);
+ }
 }
-
 function drawCloud(){
 
- let drift = Math.sin(Date.now()*0.001)*4;
+ ctx.save();
 
- ctx.globalAlpha = 0.9;
- ctx.drawImage(cloudImage, drift, 0);
+ const t = Date.now()*0.0003;
+
+ cloudLayers.forEach((layer,i)=>{
+
+   // 🔥 각 레이어마다 다른 속도 (핵심)
+   let driftX = Math.sin(t + i)*10*(i+1)*0.3;
+   let driftY = Math.cos(t*0.7 + i)*4;
+
+   ctx.globalAlpha = 0.9 - i*0.2;
+
+   ctx.drawImage(layer, driftX, driftY);
+ });
+
+ ctx.restore();
 }
-
 // ---------- DRONE ----------
 let droneParticles=[];
 
