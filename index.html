@@ -141,75 +141,69 @@ let cloudImage;
 
 function initCloud(){
 
- const noiseCanvas = document.createElement("canvas");
- const noiseCtx = noiseCanvas.getContext("2d");
+ const base = document.createElement("canvas");
+ const bctx = base.getContext("2d");
 
- noiseCanvas.width = canvas.width;
- noiseCanvas.height = canvas.height;
-
- // 🔥 1. 노이즈 생성
- const noise = noiseCtx.createImageData(noiseCanvas.width, noiseCanvas.height);
-
- for(let i=0;i<noise.data.length;i+=4){
-   let v = Math.random()*255;
-   noise.data[i] = v;
-   noise.data[i+1] = v;
-   noise.data[i+2] = v;
-   noise.data[i+3] = 255;
- }
-
- noiseCtx.putImageData(noise,0,0);
-
- // 🔥 2. blur용 캔버스 따로 생성 (중요)
- const blurCanvas = document.createElement("canvas");
- const blurCtx = blurCanvas.getContext("2d");
-
- blurCanvas.width = canvas.width;
- blurCanvas.height = canvas.height;
-
- blurCtx.filter = "blur(18px)";
- blurCtx.drawImage(noiseCanvas,0,0);
-
- // 🔥 3. 텍스트 마스크
- blurCtx.globalCompositeOperation = "destination-in";
+ base.width = canvas.width;
+ base.height = canvas.height;
 
  let size = Math.min(canvas.width/6, canvas.height/4);
 
-// 🔥 핵심: 마스크를 진하게
-blurCtx.fillStyle="rgba(255,255,255,1.0)";
-blurCtx.shadowBlur = 10;
-blurCtx.shadowColor = "white";
-blurCtx.shadowBlur = 20;
-blurCtx.globalAlpha = 1.0;
+ // 🔥 1. 텍스트 먼저 그림 (핵심)
+ bctx.fillStyle="white";
+ bctx.font=`bold ${size}px Arial`;
+ bctx.textAlign="center";
+ bctx.textBaseline="middle";
 
-blurCtx.font=`bold ${size}px Arial`;
- blurCtx.textAlign="center";
- blurCtx.textBaseline="middle";
-
- drawMultiline(blurCtx,text,
+ drawMultiline(bctx,text,
    canvas.width/2,
    canvas.height/2,
    canvas.width*0.8,
    size*1.2
  );
 
- cloudImage = blurCanvas;
-}
+ // 🔥 2. 구름 텍스처 생성
+ const noiseCanvas = document.createElement("canvas");
+ const nctx = noiseCanvas.getContext("2d");
 
+ noiseCanvas.width = canvas.width;
+ noiseCanvas.height = canvas.height;
+
+ const noise = nctx.createImageData(noiseCanvas.width, noiseCanvas.height);
+
+ for(let i=0;i<noise.data.length;i+=4){
+   let v = Math.random()*255;
+   noise.data[i]=v;
+   noise.data[i+1]=v;
+   noise.data[i+2]=v;
+   noise.data[i+3]=255;
+ }
+
+ nctx.putImageData(noise,0,0);
+
+ // 🔥 blur → 구름 느낌
+ nctx.filter = "blur(20px)";
+ nctx.drawImage(noiseCanvas,0,0);
+
+ // 🔥 3. 텍스트 위에만 구름 적용
+ bctx.globalCompositeOperation = "source-in";
+ bctx.drawImage(noiseCanvas,0,0);
+
+ cloudImage = base;
+}
 
 
 function drawCloud(){
 
  const t = Date.now()*0.0002;
 
- let driftX = Math.sin(t)*10;
- let driftY = Math.cos(t*0.6)*5;
+ let driftX = Math.sin(t)*8;
+ let driftY = Math.cos(t*0.6)*4;
 
- ctx.globalAlpha = 0.9;
+ ctx.globalAlpha = 0.95;
 
  ctx.drawImage(cloudImage, driftX, driftY);
 }
-
 
 // ---------- DRONE ----------
 let droneParticles=[];
