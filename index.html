@@ -138,10 +138,12 @@ function drawStandard(){
 
 // ---------- CLOUD (이미지 방식) ----------
 let cloudPuffs = [];
+let corePoints = [];
 
 function initCloud(){
 
  cloudPuffs = [];
+ corePoints = [];
 
  const off = document.createElement("canvas");
  const o = off.getContext("2d");
@@ -165,28 +167,27 @@ function initCloud(){
 
  const img = o.getImageData(0,0,off.width,off.height);
 
- for(let y=0;y<off.height;y+=5){
-  for(let x=0;x<off.width;x+=5){
+ // 🔥 간격 증가 (핵심)
+ for(let y=0;y<off.height;y+=7){
+  for(let x=0;x<off.width;x+=7){
 
     let i=(y*off.width+x)*4;
 
     if(img.data[i+3] > 128){
 
-      cloudPuffs.push({
-        x:x,
-        y:y,
+      // 🔥 일부는 중심 텍스트 유지
+      if(Math.random() < 0.2){
+        corePoints.push({x:x, y:y});
+      }
 
-        // 🔥 고정 위치
+      // 🔥 구름 덩어리
+      cloudPuffs.push({
         tx:x,
         ty:y,
-
-        r:Math.random()*10 + 8,
-        alpha:Math.random()*0.5 + 0.6,
-
-        // 🔥 흔들림용 랜덤값
+        r:Math.random()*6 + 4,
+        alpha:Math.random()*0.4 + 0.5,
         seed:Math.random()*1000
       });
-
     }
   }
  }
@@ -199,22 +200,25 @@ function drawCloud(){
 
  const t = Date.now()*0.001;
 
+ // ======================
+ // ☁️ 구름 레이어
+ // ======================
  cloudPuffs.forEach(p=>{
 
-   // 🔥 거의 안 움직임 (핵심)
-   let offsetX = Math.sin(t + p.seed) * 0.8;
-   let offsetY = Math.cos(t*0.7 + p.seed) * 0.5;
+   let offsetX = Math.sin(t + p.seed) * 0.6;
+   let offsetY = Math.cos(t*0.7 + p.seed) * 0.4;
 
    let x = p.tx + offsetX;
    let y = p.ty + offsetY;
 
-   // 🔥 구름 덩어리
    let g = ctx.createRadialGradient(
      x, y, 0,
      x, y, p.r
    );
 
+   // 🔥 퍼짐 줄이기 (핵심)
    g.addColorStop(0, `rgba(255,255,255,${p.alpha})`);
+   g.addColorStop(0.7, "rgba(255,255,255,0.2)");
    g.addColorStop(1, "rgba(255,255,255,0)");
 
    ctx.fillStyle = g;
@@ -225,8 +229,20 @@ function drawCloud(){
 
  });
 
+ // ======================
+ // 🔤 중심 텍스트 (가독성 핵심)
+ // ======================
+ ctx.fillStyle = "rgba(255,255,255,0.9)";
+
+ corePoints.forEach(p=>{
+   ctx.beginPath();
+   ctx.arc(p.x, p.y, 1.2, 0, Math.PI*2);
+   ctx.fill();
+ });
+
  ctx.restore();
 }
+
 
 
 // ---------- DRONE ----------
