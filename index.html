@@ -127,7 +127,6 @@ function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
  });
 }
 
-// ---------- STANDARD ----------
 function drawStandard(){
  ctx.fillStyle="#ffffff";
  ctx.font="bold 42px Arial";
@@ -136,7 +135,7 @@ function drawStandard(){
  drawMultiline(ctx,text,canvas.width/2,textY(),canvas.width*0.8,55);
 }
 
-// ---------- DRONE ----------
+// ================= DRONE =================
 let droneParticles=[];
 
 function initDrone(){
@@ -181,7 +180,6 @@ function drawDrone(){
  ctx.shadowColor="#66ccff";
 
  droneParticles.forEach((p,i)=>{
-
    p.x += (p.tx - p.x)*0.05;
    p.y += (p.ty - p.y)*0.05;
 
@@ -193,14 +191,14 @@ function drawDrone(){
    ctx.beginPath();
    ctx.arc(p.x, p.y, 1.8, 0, Math.PI*2);
    ctx.fill();
-
  });
 
  ctx.globalAlpha=1;
 }
 
-// ---------- CLOUD ----------
+// ================= CLOUD (최적화) =================
 let cloudPuffs=[];
+let cloudFrame=0;
 
 function initCloud(){
 
@@ -223,13 +221,14 @@ function initCloud(){
 
  cloudPuffs=[];
 
- for(let y=0;y<off.height;y+=7){
-  for(let x=0;x<off.width;x+=7){
+ // 🔥 샘플링 줄임 (성능 핵심)
+ for(let y=0;y<off.height;y+=12){
+  for(let x=0;x<off.width;x+=12){
     let i=(y*off.width+x)*4;
     if(img.data[i+3]>128){
       cloudPuffs.push({
         x,y,
-        r:Math.random()*6+4,
+        r:Math.random()*6+3,
         seed:Math.random()*1000
       });
     }
@@ -239,17 +238,17 @@ function initCloud(){
 
 function drawCloud(){
 
+ cloudFrame++;
+ if(cloudFrame%2!==0) return; // 🔥 프레임 절반만
+
  const t=Date.now()*0.001;
 
+ ctx.fillStyle="rgba(255,255,255,0.6)";
+
  cloudPuffs.forEach(p=>{
-   let x=p.x+Math.sin(t+p.seed)*0.6;
-   let y=p.y+Math.cos(t+p.seed)*0.4;
+   let x=p.x+Math.sin(t+p.seed)*0.5;
+   let y=p.y+Math.cos(t+p.seed)*0.3;
 
-   let g=ctx.createRadialGradient(x,y,0,x,y,p.r);
-   g.addColorStop(0,"rgba(255,255,255,0.8)");
-   g.addColorStop(1,"transparent");
-
-   ctx.fillStyle=g;
    ctx.beginPath();
    ctx.arc(x,y,p.r,0,Math.PI*2);
    ctx.fill();
@@ -317,40 +316,46 @@ function drawFireworks(){
  });
 }
 
-// ================= AURORA =================
+// ================= AURORA (개선됨) =================
 let auroraTime=0;
 
 function drawAurora(){
 
  auroraTime+=0.02;
 
- ctx.globalAlpha=0.35;
+ ctx.save();
+
+ ctx.globalAlpha=0.18;
+ ctx.filter="blur(6px)";
+
+ const topH=canvas.height*0.55;
 
  for(let i=0;i<10;i++){
 
    let x=i*canvas.width/10;
 
-   let g=ctx.createLinearGradient(x,0,x,canvas.height);
-   g.addColorStop(0,"rgba(255,0,150,0.3)");
-   g.addColorStop(0.5,"rgba(0,200,255,0.2)");
+   let g=ctx.createLinearGradient(x,0,x,topH);
+
+   g.addColorStop(0,"rgba(255,0,150,0.25)");
+   g.addColorStop(0.5,"rgba(0,200,255,0.15)");
    g.addColorStop(1,"transparent");
 
    ctx.fillStyle=g;
 
    ctx.beginPath();
 
-   for(let y=0;y<canvas.height;y+=5){
-     let wave=Math.sin(y*0.01+auroraTime+i)*30;
+   for(let y=0;y<topH;y+=5){
+     let wave=Math.sin(y*0.01+auroraTime+i)*25;
      ctx.lineTo(x+wave,y);
    }
 
-   ctx.lineTo(x+80,canvas.height);
+   ctx.lineTo(x+80,topH);
    ctx.lineTo(x+80,0);
    ctx.closePath();
    ctx.fill();
  }
 
- ctx.globalAlpha=1;
+ ctx.restore();
 }
 
 // ================= START =================
@@ -393,11 +398,9 @@ function draw(){
  ctx.fillRect(0,0,canvas.width,canvas.height);
  ctx.globalCompositeOperation="source-over";
 
- // 효과
  if(effStyle==="fireworks") drawFireworks();
  else if(effStyle==="aurora") drawAurora();
 
- // 텍스트 스타일
  if(txtStyle==="drone") drawDrone();
  else if(txtStyle==="cloud") drawCloud();
  else drawStandard();
