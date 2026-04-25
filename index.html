@@ -9,57 +9,35 @@ html,body{
 margin:0;
 padding:0;
 overflow:hidden;
-font-family:Arial;
 background:black;
+font-family:Arial;
 }
 
 /* 카메라 */
 video{
 position:fixed;
+top:0;
+left:0;
 width:100%;
 height:100%;
 object-fit:cover;
 z-index:0;
 
-/* 🔥 밤 느낌 */
-filter:brightness(0.25) contrast(1.3);
+/* 🔥 밤 느낌 (중요) */
+filter:brightness(0.15) contrast(1.4);
 }
 
-/* 효과 레이어 */
-.effect{
+/* 캔버스 */
+canvas{
 position:fixed;
+top:0;
+left:0;
 width:100%;
 height:100%;
 z-index:1;
-pointer-events:none;
 }
 
-/* 텍스트 */
-#txt{
-position:fixed;
-top:40%;
-width:100%;
-text-align:center;
-z-index:2;
-color:white;
-font-weight:bold;
-}
-
-/* cloud 효과 */
-.cloud{
-text-shadow:
-0 0 10px white,
-0 0 20px white,
-0 0 30px white;
-filter:blur(1px);
-}
-
-/* drone 효과 */
-.drone{
-letter-spacing:12px;
-}
-
-/* UI */
+/* ================= START UI ================= */
 #intro{
 position:fixed;
 width:100%;
@@ -69,106 +47,249 @@ z-index:10;
 display:flex;
 justify-content:center;
 align-items:center;
-flex-direction:column;
+color:white;
+}
+
+.introBox{
+text-align:center;
+}
+
+.introBox h1{
+font-size:42px;
+margin-bottom:30px;
+letter-spacing:2px;
 }
 
 button{
-margin:10px;
-padding:14px 30px;
-border:none;
+display:block;
+margin:12px auto;
+padding:15px 30px;
 border-radius:30px;
+border:none;
 font-size:18px;
+width:220px;
 }
 
-.startBtn{background:red;color:white;}
-.appBtn{background:white;color:black;}
+.startBtn{
+background:red;
+color:white;
+}
+
+.appBtn{
+background:white;
+color:black;
+}
+
+/* ================= COUNT ================= */
+#count{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+font-size:90px;
+color:white;
+z-index:5;
+}
 </style>
 </head>
 
 <body>
 
 <div id="intro">
-  <button class="startBtn" onclick="start()">START</button>
-  <button class="appBtn">APP</button>
+  <div class="introBox">
+    <h1>HearMeSKY</h1>
+    <button class="startBtn" onclick="start()">START</button>
+    <button class="appBtn" onclick="goApp()">APP 가입</button>
+  </div>
 </div>
 
 <video id="video" autoplay playsinline muted></video>
-
-<!-- 효과 -->
-<canvas id="fx" class="effect"></canvas>
-
-<div id="txt"></div>
+<canvas id="c"></canvas>
+<div id="count"></div>
 
 <script>
 
-const p=new URLSearchParams(location.search);
+// ================= PARAM =================
+const p = new URLSearchParams(location.search);
+const text = (p.get("msg")||"WE LOVE GINA").replaceAll("_"," ");
+const txtStyle = p.get("txtsty")||"standard";
+const effStyle = p.get("effsty")||"none";
 
-const text=(p.get("msg")||"WE LOVE GINA").replaceAll("_"," ");
-const txtStyle=p.get("txtsty")||"standard";
-const effStyle=p.get("effsty")||"none";
+const video = document.getElementById("video");
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
 
-const video=document.getElementById("video");
-const txt=document.getElementById("txt");
-const canvas=document.getElementById("fx");
-const ctx=canvas.getContext("2d");
+function resize(){
+ canvas.width=innerWidth;
+ canvas.height=innerHeight;
+}
+resize();
+onresize=resize;
 
-canvas.width=innerWidth;
-canvas.height=innerHeight;
+function textY(){ return canvas.height*0.42; }
 
-// ================= TEXT =================
-txt.innerText=text;
-
-if(txtStyle==="standard"){
- txt.style.fontSize="60px";
+// ================= STANDARD =================
+function drawStandard(){
+ ctx.fillStyle="#fff";
+ ctx.font="bold 60px Arial";
+ ctx.textAlign="center";
+ ctx.shadowBlur=20;
+ ctx.shadowColor="#fff";
+ ctx.fillText(text,canvas.width/2,textY());
 }
 
-if(txtStyle==="cloud"){
- txt.classList.add("cloud");
- txt.style.fontSize="70px";
-}
+// ================= DRONE =================
+let drone=[];
+function initDrone(){
+ drone=[];
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
 
-if(txtStyle==="drone"){
- txt.classList.add("drone");
- txt.style.fontSize="60px";
-}
+ off.width=canvas.width;
+ off.height=canvas.height;
 
-// ================= EFFECT =================
+ o.fillStyle="#fff";
+ o.font="bold 110px Arial";
+ o.textAlign="center";
+ o.fillText(text,canvas.width/2,textY());
 
-// 🔥 FIREWORK (이미지 느낌)
-function drawFireworks(){
- for(let i=0;i<5;i++){
-   let x=Math.random()*canvas.width;
-   let y=Math.random()*canvas.height*0.4;
+ const img=o.getImageData(0,0,off.width,off.height);
 
-   ctx.beginPath();
-   ctx.arc(x,y,3,0,Math.PI*2);
-   ctx.fillStyle="#ff5555";
-   ctx.fill();
-
-   for(let j=0;j<20;j++){
-     let a=Math.random()*Math.PI*2;
-     let r=Math.random()*50;
-     ctx.fillRect(x+Math.cos(a)*r,y+Math.sin(a)*r,2,2);
-   }
+ for(let y=0;y<off.height;y+=6){
+  for(let x=0;x<off.width;x+=6){
+    let i=(y*off.width+x)*4;
+    if(img.data[i+3]>128){
+      drone.push({x,y});
+    }
+  }
  }
 }
 
-// 🔥 AURORA (부드러운 밴드)
-function drawAurora(){
+function drawDrone(){
+ ctx.fillStyle="#fff";
+ drone.forEach(p=>{
+   ctx.beginPath();
+   ctx.arc(p.x,p.y,2.2,0,Math.PI*2);
+   ctx.fill();
+ });
+}
 
- ctx.globalAlpha=0.2;
+// ================= CLOUD =================
+let cloud=[];
+function initCloud(){
 
- for(let i=0;i<5;i++){
+ cloud=[];
 
-   let g=ctx.createLinearGradient(0,0,0,canvas.height*0.5);
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
 
-   g.addColorStop(0,"rgba(0,255,200,0.3)");
-   g.addColorStop(0.5,"rgba(150,0,255,0.2)");
-   g.addColorStop(1,"transparent");
+ off.width=canvas.width;
+ off.height=canvas.height;
+
+ o.fillStyle="#fff";
+ o.font="bold 120px Arial";
+ o.textAlign="center";
+ o.fillText(text,canvas.width/2,textY());
+
+ const img=o.getImageData(0,0,off.width,off.height);
+
+ for(let y=0;y<off.height;y+=8){
+  for(let x=0;x<off.width;x+=8){
+    let i=(y*off.width+x)*4;
+    if(img.data[i+3]>128){
+      cloud.push({
+        x,y,
+        r:6 + Math.random()*6
+      });
+    }
+  }
+ }
+}
+
+function drawCloud(){
+
+ cloud.forEach(p=>{
+
+   let g=ctx.createRadialGradient(
+     p.x,p.y,0,
+     p.x,p.y,p.r
+   );
+
+   g.addColorStop(0,"rgba(255,255,255,0.9)");
+   g.addColorStop(1,"rgba(255,255,255,0)");
 
    ctx.fillStyle=g;
 
-   ctx.fillRect(i*200,0,200,canvas.height*0.5);
+   ctx.beginPath();
+   ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+   ctx.fill();
+ });
+}
+
+// ================= FIREWORK =================
+let fireworks=[];
+
+function explode(){
+
+ let x=Math.random()*canvas.width;
+ let y=Math.random()*canvas.height*0.35;
+
+ for(let i=0;i<80;i++){
+   let a=Math.random()*Math.PI*2;
+   let s=Math.random()*3+1;
+
+   fireworks.push({
+     x,y,
+     vx:Math.cos(a)*s,
+     vy:Math.sin(a)*s,
+     life:80
+   });
+ }
+}
+
+setInterval(()=>{ if(effStyle==="fireworks") explode(); },1200);
+
+function drawFireworks(){
+
+ fireworks.forEach((p,i)=>{
+
+   p.x+=p.vx;
+   p.y+=p.vy;
+   p.vy+=0.02;
+   p.life--;
+
+   ctx.globalAlpha=p.life/80;
+   ctx.fillStyle="#ff4d4d";
+
+   ctx.beginPath();
+   ctx.arc(p.x,p.y,1.8,0,Math.PI*2);
+   ctx.fill();
+
+   if(p.life<=0) fireworks.splice(i,1);
+ });
+
+ ctx.globalAlpha=1;
+}
+
+// ================= AURORA =================
+function drawAurora(){
+
+ const h=canvas.height*0.35;
+
+ ctx.globalAlpha=0.25;
+
+ for(let i=0;i<4;i++){
+
+   let x=i*canvas.width/4;
+
+   let g=ctx.createLinearGradient(x,0,x,h);
+
+   g.addColorStop(0,"rgba(0,255,200,0.5)");
+   g.addColorStop(0.5,"rgba(180,0,255,0.4)");
+   g.addColorStop(1,"transparent");
+
+   ctx.fillStyle=g;
+   ctx.fillRect(x,0,canvas.width/4,h);
  }
 
  ctx.globalAlpha=1;
@@ -183,8 +304,44 @@ async function start(){
 
  intro.style.display="none";
 
- if(effStyle==="fireworks") setInterval(drawFireworks,800);
- if(effStyle==="aurora") drawAurora();
+ await countdown();
+
+ if(txtStyle==="drone") initDrone();
+ if(txtStyle==="cloud") initCloud();
+
+ draw();
+}
+
+function countdown(){
+ return new Promise(res=>{
+  let c=3;
+  count.innerText=c;
+  let t=setInterval(()=>{
+   c--;
+   if(c>0) count.innerText=c;
+   else{count.innerText="";clearInterval(t);res();}
+  },1000);
+ });
+}
+
+// ================= DRAW =================
+function draw(){
+
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+
+ if(effStyle==="fireworks") drawFireworks();
+ else if(effStyle==="aurora") drawAurora();
+
+ if(txtStyle==="drone") drawDrone();
+ else if(txtStyle==="cloud") drawCloud();
+ else drawStandard();
+
+ requestAnimationFrame(draw);
+}
+
+// ================= APP =================
+function goApp(){
+ alert("APP 연결 예정");
 }
 
 </script>
