@@ -111,12 +111,41 @@ onresize=resize;
 
 function textY(){ return canvas.height*0.42; }
 
-// ================= STANDARD =================
-function drawStandard(){
+// ================= TEXT (자동 줄바꿈) =================
+function drawText(){
+
+ let maxWidth = canvas.width * 0.8;
+ let fontSize = 70;
+
+ while(fontSize > 30){
+   ctx.font = "bold " + fontSize + "px Arial";
+   if(ctx.measureText(text).width < maxWidth) break;
+   fontSize -= 2;
+ }
+
  ctx.fillStyle="#fff";
- ctx.font="bold 60px Arial";
  ctx.textAlign="center";
- ctx.fillText(text,canvas.width/2,textY());
+
+ let words = text.split(" ");
+ let line="";
+ let lines=[];
+
+ for(let w of words){
+   let test=line+w+" ";
+   if(ctx.measureText(test).width>maxWidth){
+     lines.push(line);
+     line=w+" ";
+   }else{
+     line=test;
+   }
+ }
+ lines.push(line);
+
+ let startY=textY()-(lines.length*fontSize)/2;
+
+ lines.forEach((l,i)=>{
+   ctx.fillText(l,canvas.width/2,startY+i*fontSize*1.2);
+ });
 }
 
 // ================= DRONE =================
@@ -149,14 +178,9 @@ function initDrone(){
 
 function drawDrone(){
  ctx.fillStyle="#fff";
- ctx.shadowBlur=10;
- ctx.shadowColor="#fff";
-
  drone.forEach(p=>{
    ctx.fillRect(p.x,p.y,2,2);
  });
-
- ctx.shadowBlur=0;
 }
 
 // ================= CLOUD =================
@@ -181,10 +205,7 @@ function initCloud(){
   for(let x=0;x<off.width;x+=7){
     let i=(y*off.width+x)*4;
     if(img.data[i+3]>128){
-      cloud.push({
-        x,y,
-        r:5+Math.random()*5
-      });
+      cloud.push({x,y,r:5+Math.random()*5});
     }
   }
  }
@@ -202,33 +223,32 @@ function drawCloud(){
  });
 }
 
-// ================= FIREWORK (최적화) =================
+// ================= FIREWORK =================
 let fireworks=[];
 
 function launchFirework(){
+
  let x=Math.random()*canvas.width;
- let targetY=canvas.height*0.3;
+ let targetY=canvas.height*(0.2+Math.random()*0.2);
 
  fireworks.push({
    type:"rocket",
    x,
    y:canvas.height,
-   vy:-6
+   vy:-6,
+   targetY
  });
 }
 
 setInterval(()=>{
- if(effStyle==="fireworks" && fireworks.length<120){
+ if(effStyle==="fireworks" && fireworks.length<100){
    launchFirework();
  }
 },1000);
 
 function explodeFirework(x,y){
 
- const colors=[
-   "#ff4040","#ffd700","#66ccff","#cc66ff","#ffffff"
- ];
-
+ const colors=["#ff4040","#ffd700","#66ccff","#cc66ff","#ffffff"];
  const color=colors[Math.floor(Math.random()*colors.length)];
 
  const arms=10;
@@ -262,11 +282,9 @@ function drawFireworks(){
    if(p.type==="rocket"){
 
      p.y+=p.vy;
-
-     ctx.fillStyle="#fff";
      ctx.fillRect(p.x,p.y,2,6);
 
-     if(p.y<canvas.height*0.3){
+     if(p.y<=p.targetY){
        explodeFirework(p.x,p.y);
      }else{
        next.push(p);
@@ -356,7 +374,7 @@ function draw(){
 
  if(txtStyle==="drone") drawDrone();
  else if(txtStyle==="cloud") drawCloud();
- else drawStandard();
+ else drawText();
 
  requestAnimationFrame(draw);
 }
