@@ -92,6 +92,7 @@ z-index:5;
 const params = new URLSearchParams(location.search);
 const text = (params.get("msg") || "WE LOVE YOU").replaceAll("_"," ");
 const txtStyle = params.get("txtsty") || "standard";
+const effStyle = params.get("effsty") || "none";
 
 // ================= SETUP =================
 const video = document.getElementById("video");
@@ -105,28 +106,17 @@ function resize(){
 resize();
 onresize=resize;
 
-let streamRef;
+// ================= TEXT =================
+function textY(){ return canvas.height*0.32; }
 
-// ================= TEXT 위치 =================
-function textY(){
- return canvas.height * 0.32;
-}
-
-// ================= TEXT 줄바꿈 =================
 function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
-
- let words=text.split(" ");
- let line="";
- let lines=[];
-
+ let words=text.split(" "), line="", lines=[];
  for(let w of words){
    let test=line+w+" ";
    if(ctx.measureText(test).width>maxWidth){
      lines.push(line);
      line=w+" ";
-   }else{
-     line=test;
-   }
+   }else line=test;
  }
  lines.push(line);
 
@@ -137,17 +127,16 @@ function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
  });
 }
 
-// ================= STANDARD =================
+// ---------- STANDARD ----------
 function drawStandard(){
  ctx.fillStyle="#ffffff";
  ctx.font="bold 42px Arial";
  ctx.textAlign="center";
  ctx.textBaseline="middle";
-
  drawMultiline(ctx,text,canvas.width/2,textY(),canvas.width*0.8,55);
 }
 
-// ================= DRONE =================
+// ---------- DRONE ----------
 let droneParticles=[];
 
 function initDrone(){
@@ -210,8 +199,65 @@ function drawDrone(){
  ctx.globalAlpha=1;
 }
 
+// ---------- CLOUD ----------
+let cloudPuffs=[];
+
+function initCloud(){
+
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
+
+ off.width=canvas.width;
+ off.height=canvas.height;
+
+ let size=Math.min(canvas.width/6,canvas.height/4);
+
+ o.fillStyle="white";
+ o.font=`bold ${size}px Arial`;
+ o.textAlign="center";
+ o.textBaseline="middle";
+
+ drawMultiline(o,text,canvas.width/2,textY(),canvas.width*0.8,size*1.2);
+
+ const img=o.getImageData(0,0,off.width,off.height);
+
+ cloudPuffs=[];
+
+ for(let y=0;y<off.height;y+=7){
+  for(let x=0;x<off.width;x+=7){
+    let i=(y*off.width+x)*4;
+    if(img.data[i+3]>128){
+      cloudPuffs.push({
+        x,y,
+        r:Math.random()*6+4,
+        seed:Math.random()*1000
+      });
+    }
+  }
+ }
+}
+
+function drawCloud(){
+
+ const t=Date.now()*0.001;
+
+ cloudPuffs.forEach(p=>{
+   let x=p.x+Math.sin(t+p.seed)*0.6;
+   let y=p.y+Math.cos(t+p.seed)*0.4;
+
+   let g=ctx.createRadialGradient(x,y,0,x,y,p.r);
+   g.addColorStop(0,"rgba(255,255,255,0.8)");
+   g.addColorStop(1,"transparent");
+
+   ctx.fillStyle=g;
+   ctx.beginPath();
+   ctx.arc(x,y,p.r,0,Math.PI*2);
+   ctx.fill();
+ });
+}
+
 // ================= FIREWORK =================
-let rockets=[], sparks=[];
+let rockets=[],sparks=[];
 
 function launchRocket(){
  rockets.push({
@@ -225,18 +271,10 @@ function launchRocket(){
 setInterval(launchRocket,1000);
 
 function explode(x,y){
-
  for(let i=0;i<80;i++){
    let a=Math.random()*Math.PI*2;
    let s=Math.random()*2+1;
-
-   sparks.push({
-     x,y,
-     vx:Math.cos(a)*s,
-     vy:Math.sin(a)*s,
-     life:70,
-     size:Math.random()*1.2+0.6
-   });
+   sparks.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:70});
  }
 }
 
@@ -258,8 +296,6 @@ function drawFireworks(){
 
  sparks.forEach((s,i)=>{
 
-   ctx.shadowBlur=0;
-
    s.x+=s.vx;
    s.y+=s.vy;
    s.vy+=0.03;
@@ -268,7 +304,7 @@ function drawFireworks(){
    ctx.globalAlpha=s.life/70;
 
    ctx.strokeStyle="#ff3b3b";
-   ctx.lineWidth=s.size;
+   ctx.lineWidth=1.5;
 
    ctx.beginPath();
    ctx.moveTo(s.x,s.y);
@@ -281,14 +317,50 @@ function drawFireworks(){
  });
 }
 
+// ================= AURORA =================
+let auroraTime=0;
+
+function drawAurora(){
+
+ auroraTime+=0.02;
+
+ ctx.globalAlpha=0.35;
+
+ for(let i=0;i<10;i++){
+
+   let x=i*canvas.width/10;
+
+   let g=ctx.createLinearGradient(x,0,x,canvas.height);
+   g.addColorStop(0,"rgba(255,0,150,0.3)");
+   g.addColorStop(0.5,"rgba(0,200,255,0.2)");
+   g.addColorStop(1,"transparent");
+
+   ctx.fillStyle=g;
+
+   ctx.beginPath();
+
+   for(let y=0;y<canvas.height;y+=5){
+     let wave=Math.sin(y*0.01+auroraTime+i)*30;
+     ctx.lineTo(x+wave,y);
+   }
+
+   ctx.lineTo(x+80,canvas.height);
+   ctx.lineTo(x+80,0);
+   ctx.closePath();
+   ctx.fill();
+ }
+
+ ctx.globalAlpha=1;
+}
+
 // ================= START =================
 async function start(){
 
- streamRef=await navigator.mediaDevices.getUserMedia({
+ let stream=await navigator.mediaDevices.getUserMedia({
    video:{facingMode:"environment"}
  });
 
- video.srcObject=streamRef;
+ video.srcObject=stream;
  await video.play();
 
  intro.style.display="none";
@@ -296,6 +368,7 @@ async function start(){
  await countdown();
 
  if(txtStyle==="drone") initDrone();
+ if(txtStyle==="cloud") initCloud();
 
  draw();
 }
@@ -320,9 +393,13 @@ function draw(){
  ctx.fillRect(0,0,canvas.width,canvas.height);
  ctx.globalCompositeOperation="source-over";
 
- drawFireworks();
+ // 효과
+ if(effStyle==="fireworks") drawFireworks();
+ else if(effStyle==="aurora") drawAurora();
 
+ // 텍스트 스타일
  if(txtStyle==="drone") drawDrone();
+ else if(txtStyle==="cloud") drawCloud();
  else drawStandard();
 
  requestAnimationFrame(draw);
