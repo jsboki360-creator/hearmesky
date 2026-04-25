@@ -70,7 +70,6 @@ color:white;
 z-index:5;
 }
 
-/* 캡쳐 버튼 */
 #captureBtn{
 position:fixed;
 bottom:30px;
@@ -84,23 +83,6 @@ font-size:18px;
 background:#ffffff;
 color:black;
 box-shadow:0 0 15px rgba(255,255,255,0.6);
-}
-
-/* 공유 버튼 */
-#shareBtn{
-position:fixed;
-bottom:90px;
-left:50%;
-transform:translateX(-50%);
-z-index:20;
-padding:14px 28px;
-border:none;
-border-radius:30px;
-font-size:18px;
-background:#00c853;
-color:white;
-box-shadow:0 0 15px rgba(0,255,100,0.6);
-display:none;
 }
 </style>
 </head>
@@ -120,14 +102,13 @@ display:none;
 <div id="count"></div>
 
 <button id="captureBtn" onclick="capture()">📸 CAPTURE</button>
-<button id="shareBtn" onclick="shareImage()">📤 SHARE</button>
 
 <script>
 
 // ================= PARAM =================
 const params = new URLSearchParams(location.search);
 const text = (params.get("msg") || "WE LOVE YOU").replaceAll("_"," ");
-const effStyle = params.get("effsty") || "fireworks";
+const txtStyle = params.get("txtsty") || "standard";
 
 // ================= SETUP =================
 const video = document.getElementById("video");
@@ -143,14 +124,81 @@ onresize=resize;
 
 let streamRef;
 
-// ================= TEXT =================
-function drawText(){
+// ================= TEXT 위치 =================
+function textY(){
+ return canvas.height * 0.32;
+}
+
+// ================= STANDARD =================
+function drawStandard(){
  ctx.fillStyle="#ffffff";
  ctx.font="bold 48px Arial";
  ctx.textAlign="center";
  ctx.textBaseline="middle";
+ ctx.fillText(text, canvas.width/2, textY());
+}
 
- ctx.fillText(text, canvas.width/2, canvas.height*0.32);
+// ================= DRONE =================
+let droneParticles=[];
+
+function initDrone(){
+
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
+
+ off.width=canvas.width;
+ off.height=canvas.height;
+
+ let size=Math.min(canvas.width/6,canvas.height/4);
+
+ o.fillStyle="white";
+ o.font=`bold ${size}px Arial`;
+ o.textAlign="center";
+ o.textBaseline="middle";
+
+ o.fillText(text, canvas.width/2, textY());
+
+ const img=o.getImageData(0,0,off.width,off.height);
+
+ droneParticles=[];
+
+ for(let y=0;y<off.height;y+=6){
+  for(let x=0;x<off.width;x+=6){
+    let i=(y*off.width+x)*4;
+    if(img.data[i+3]>128){
+      droneParticles.push({
+        x:Math.random()*canvas.width,
+        y:Math.random()*canvas.height,
+        tx:x,
+        ty:y
+      });
+    }
+  }
+ }
+}
+
+function drawDrone(){
+
+ ctx.shadowBlur=6;
+ ctx.shadowColor="#66ccff";
+
+ droneParticles.forEach((p,i)=>{
+
+   p.x += (p.tx - p.x)*0.05;
+   p.y += (p.ty - p.y)*0.05;
+
+   let flicker = 0.7 + Math.sin(Date.now()*0.01 + i)*0.3;
+   ctx.globalAlpha = flicker;
+
+   ctx.fillStyle = "#66ccff";
+
+   ctx.beginPath();
+   ctx.arc(p.x, p.y, 1.8, 0, Math.PI*2);
+   ctx.fill();
+
+ });
+
+ ctx.globalAlpha=1;
 }
 
 // ================= FIREWORK =================
@@ -168,8 +216,6 @@ function launchRocket(){
 setInterval(launchRocket,1000);
 
 function explode(x,y){
- const colors=["#ff3b3b","#ff6b6b","#ff2e63","#ff8c42","#ffd166"];
- let c=colors[Math.floor(Math.random()*colors.length)];
 
  for(let i=0;i<80;i++){
    let a=Math.random()*Math.PI*2;
@@ -180,8 +226,7 @@ function explode(x,y){
      vx:Math.cos(a)*s,
      vy:Math.sin(a)*s,
      life:70,
-     size:Math.random()*1.2+0.6,
-     color:c
+     size:Math.random()*1.2+0.6
    });
  }
 }
@@ -213,7 +258,7 @@ function drawFireworks(){
 
    ctx.globalAlpha=s.life/70;
 
-   ctx.strokeStyle=s.color;
+   ctx.strokeStyle="#ff3b3b";
    ctx.lineWidth=s.size;
 
    ctx.beginPath();
@@ -227,47 +272,37 @@ function drawFireworks(){
  });
 }
 
-// ================= CAPTURE =================
-let capturedBlob=null;
-
-function capture(){
+// ================= CAPTURE + SHARE =================
+async function capture(){
 
  const temp=document.createElement("canvas");
  temp.width=canvas.width;
  temp.height=canvas.height;
  const tctx=temp.getContext("2d");
 
- tctx.drawImage(video,0,0,temp.width,temp.height);
+ tctx.drawImage(video,0,0);
  tctx.drawImage(canvas,0,0);
 
- temp.toBlob(blob=>{
-   capturedBlob=blob;
-   document.getElementById("shareBtn").style.display="block";
+ temp.toBlob(async (blob)=>{
+
+   const file=new File([blob],"hearmesky.png",{type:"image/png"});
+
+   // 🔥 OS 공유 바로 실행
+   if(navigator.canShare && navigator.canShare({files:[file]})){
+     await navigator.share({
+       files:[file],
+       title:"HearMeSKY",
+       text:"메시지를 확인해보세요!"
+     });
+   }else{
+     // PC fallback
+     const link=document.createElement("a");
+     link.href=URL.createObjectURL(blob);
+     link.download="hearmesky.png";
+     link.click();
+   }
+
  }, "image/png");
-}
-
-// ================= SHARE =================
-async function shareImage(){
-
- if(!capturedBlob){
-   alert("먼저 캡쳐하세요!");
-   return;
- }
-
- const file=new File([capturedBlob],"hearmesky.png",{type:"image/png"});
-
- if(navigator.canShare && navigator.canShare({files:[file]})){
-   await navigator.share({
-     files:[file],
-     title:"HearMeSKY",
-     text:"메시지를 확인해보세요!"
-   });
- }else{
-   const link=document.createElement("a");
-   link.href=URL.createObjectURL(capturedBlob);
-   link.download="hearmesky.png";
-   link.click();
- }
 }
 
 // ================= START =================
@@ -283,6 +318,9 @@ async function start(){
  intro.style.display="none";
 
  await countdown();
+
+ if(txtStyle==="drone") initDrone();
+
  draw();
 }
 
@@ -306,9 +344,10 @@ function draw(){
  ctx.fillRect(0,0,canvas.width,canvas.height);
  ctx.globalCompositeOperation="source-over";
 
- if(effStyle==="fireworks") drawFireworks();
+ drawFireworks();
 
- drawText();
+ if(txtStyle==="drone") drawDrone();
+ else drawStandard();
 
  requestAnimationFrame(draw);
 }
