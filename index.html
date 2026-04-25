@@ -111,7 +111,7 @@ onresize=resize;
 
 function textY(){ return canvas.height*0.42; }
 
-// ================= TEXT (자동 줄바꿈) =================
+// ================= TEXT =================
 function drawText(){
 
  let maxWidth = canvas.width * 0.8;
@@ -132,7 +132,7 @@ function drawText(){
 
  for(let w of words){
    let test=line+w+" ";
-   if(ctx.measureText(test).width>maxWidth){
+   if(ctx.measureText(test)>maxWidth){
      lines.push(line);
      line=w+" ";
    }else{
@@ -150,7 +150,6 @@ function drawText(){
 
 // ================= DRONE =================
 let drone=[];
-
 function initDrone(){
  drone=[];
  const off=document.createElement("canvas");
@@ -185,7 +184,6 @@ function drawDrone(){
 
 // ================= CLOUD =================
 let cloud=[];
-
 function initCloud(){
  cloud=[];
  const off=document.createElement("canvas");
@@ -241,7 +239,7 @@ function launchFirework(){
 }
 
 setInterval(()=>{
- if(effStyle==="fireworks" && fireworks.length<100){
+ if(effStyle==="fireworks" && fireworks.length<120){
    launchFirework();
  }
 },1000);
@@ -284,7 +282,7 @@ function drawFireworks(){
      p.y+=p.vy;
      ctx.fillRect(p.x,p.y,2,6);
 
-     if(p.y<=p.targetY){
+     if(p.y<=p.targetY || p.vy>0){
        explodeFirework(p.x,p.y);
      }else{
        next.push(p);
