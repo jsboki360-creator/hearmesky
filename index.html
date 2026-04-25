@@ -6,81 +6,82 @@
 
 <style>
 html,body{
-margin:0;
-padding:0;
-overflow:hidden;
-background:black;
-font-family:Arial;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  background:black;
+  font-family:Arial, sans-serif;
 }
 
-/* 카메라 */
 video{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-object-fit:cover;
-z-index:0;
-
-/* 🔥 밤 느낌 (조정 가능) */
-filter:brightness(0.2) contrast(1.3);
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  z-index:0;
 }
 
-/* 캔버스 */
 canvas{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-z-index:1;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:1;
 }
 
-/* 시작화면 */
 #intro{
-position:fixed;
-width:100%;
-height:100%;
-background:black;
-z-index:10;
-display:flex;
-justify-content:center;
-align-items:center;
-color:white;
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:black;
+  z-index:10;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:white;
 }
 
 .introBox{
-text-align:center;
+  text-align:center;
 }
 
 .introBox h1{
-font-size:42px;
-margin-bottom:30px;
-letter-spacing:2px;
+  font-size:42px;
+  margin-bottom:30px;
+  letter-spacing:2px;
 }
 
 button{
-display:block;
-margin:12px auto;
-padding:15px 30px;
-border-radius:30px;
-border:none;
-font-size:18px;
-width:220px;
+  display:block;
+  margin:12px auto;
+  padding:15px 30px;
+  border-radius:30px;
+  border:none;
+  font-size:18px;
+  width:220px;
 }
 
-.startBtn{background:red;color:white;}
-.appBtn{background:white;color:black;}
+.startBtn{
+  background:red;
+  color:white;
+}
+
+.appBtn{
+  background:white;
+  color:black;
+}
 
 #count{
-position:fixed;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-font-size:90px;
-color:white;
-z-index:5;
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:90px;
+  color:white;
+  z-index:5;
 }
 </style>
 </head>
@@ -100,247 +101,417 @@ z-index:5;
 <div id="count"></div>
 
 <script>
-
 // ================= PARAM =================
-const p = new URLSearchParams(location.search);
-const text = (p.get("msg")||"WE LOVE GINA").replaceAll("_"," ");
-const txtStyle = p.get("txtsty")||"standard";
-const effStyle = p.get("effsty")||"none";
+const params = new URLSearchParams(location.search);
 
+const text = (params.get("msg") || "WE LOVE GINA").replaceAll("_"," ");
+const txtStyle = (params.get("txtsty") || "standard").toLowerCase();
+const effStyle = (params.get("effsty") || "none").toLowerCase();
+
+// ================= SETUP =================
 const video = document.getElementById("video");
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
 function resize(){
- canvas.width=innerWidth;
- canvas.height=innerHeight;
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
 }
 resize();
-onresize=resize;
+onresize = () => {
+  resize();
+  if(txtStyle==="drone") initDrone();
+  if(txtStyle==="cloud") initCloud();
+};
 
-function textY(){ return canvas.height*0.42; }
+function textY(){
+  return canvas.height * 0.43;
+}
 
-// ================= 핵심 텍스트 =================
-function drawCoreText(){
- ctx.fillStyle="#fff";
- ctx.font="bold 60px Arial";
- ctx.textAlign="center";
+// ================= TEXT WRAP =================
+function splitTextSmart(str){
+  if(str.includes(" ")) return str.split(" ");
+  return [...str];
+}
 
- ctx.shadowBlur=25;
- ctx.shadowColor="#fff";
+function makeLines(ctx, str, maxWidth){
+  const parts = splitTextSmart(str);
+  let lines = [];
+  let line = "";
 
- ctx.fillText(text,canvas.width/2,textY());
+  for(const p of parts){
+    const add = str.includes(" ") ? p + " " : p;
+    const test = line + add;
 
- ctx.shadowBlur=0;
+    if(ctx.measureText(test).width > maxWidth && line.length > 0){
+      lines.push(line.trim());
+      line = add;
+    }else{
+      line = test;
+    }
+  }
+
+  if(line.trim().length > 0) lines.push(line.trim());
+  return lines;
+}
+
+function calcFontSize(str, maxWidth, maxSize, minSize){
+  let size = maxSize;
+  while(size > minSize){
+    ctx.font = `bold ${size}px Arial`;
+    const lines = makeLines(ctx, str, maxWidth);
+    let ok = true;
+    for(const l of lines){
+      if(ctx.measureText(l).width > maxWidth){
+        ok = false;
+        break;
+      }
+    }
+    if(ok) return size;
+    size -= 2;
+  }
+  return minSize;
+}
+
+function drawMultilineText(targetCtx, str, x, y, maxWidth, fontSize, lineHeight, fill){
+  targetCtx.font = `bold ${fontSize}px Arial`;
+  targetCtx.textAlign = "center";
+  targetCtx.textBaseline = "middle";
+  targetCtx.fillStyle = fill;
+
+  const lines = makeLines(targetCtx, str, maxWidth);
+  const startY = y - ((lines.length - 1) * lineHeight) / 2;
+
+  lines.forEach((line, i)=>{
+    targetCtx.fillText(line, x, startY + i * lineHeight);
+  });
+}
+
+// ================= STANDARD =================
+function drawStandard(){
+  const maxW = canvas.width * 0.82;
+  const fs = calcFontSize(text, maxW, 68, 32);
+
+  ctx.save();
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = "rgba(255,255,255,0.85)";
+  drawMultilineText(ctx, text, canvas.width/2, textY(), maxW, fs, fs*1.18, "#fff");
+  ctx.restore();
 }
 
 // ================= DRONE =================
-let drone=[];
+let drone = [];
+
 function initDrone(){
- drone=[];
- const off=document.createElement("canvas");
- const o=off.getContext("2d");
+  drone = [];
 
- off.width=canvas.width;
- off.height=canvas.height;
+  const off = document.createElement("canvas");
+  const o = off.getContext("2d");
 
- o.fillStyle="#fff";
- o.font="bold 110px Arial";
- o.textAlign="center";
- o.fillText(text,canvas.width/2,textY());
+  off.width = canvas.width;
+  off.height = canvas.height;
 
- const img=o.getImageData(0,0,off.width,off.height);
+  const maxW = canvas.width * 0.82;
+  const fs = calcFontSize(text, maxW, 92, 34);
 
- for(let y=0;y<off.height;y+=6){
-  for(let x=0;x<off.width;x+=6){
-    let i=(y*off.width+x)*4;
-    if(img.data[i+3]>128){
-      drone.push({x,y});
+  o.clearRect(0,0,off.width,off.height);
+  drawMultilineText(o, text, canvas.width/2, textY(), maxW, fs, fs*1.18, "#fff");
+
+  const img = o.getImageData(0,0,off.width,off.height);
+
+  const step = 7;
+
+  for(let y=0; y<off.height; y+=step){
+    for(let x=0; x<off.width; x+=step){
+      const i = (y * off.width + x) * 4;
+      if(img.data[i+3] > 128){
+        drone.push({x,y});
+      }
     }
   }
- }
 }
 
 function drawDrone(){
- ctx.fillStyle="#fff";
- ctx.shadowBlur=10;
- ctx.shadowColor="#fff";
+  ctx.save();
+  ctx.fillStyle = "#fff";
+  ctx.shadowBlur = 11;
+  ctx.shadowColor = "#ffffff";
 
- drone.forEach(p=>{
-   ctx.beginPath();
-   ctx.arc(p.x,p.y,2.2,0,Math.PI*2);
-   ctx.fill();
- });
+  drone.forEach(p=>{
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.9, 0, Math.PI*2);
+    ctx.fill();
+  });
 
- ctx.shadowBlur=0;
- drawCoreText(); // 🔥 핵심
+  ctx.restore();
 }
 
 // ================= CLOUD =================
-let cloud=[];
+let cloud = [];
+
 function initCloud(){
+  cloud = [];
 
- cloud=[];
+  const off = document.createElement("canvas");
+  const o = off.getContext("2d");
 
- const off=document.createElement("canvas");
- const o=off.getContext("2d");
+  off.width = canvas.width;
+  off.height = canvas.height;
 
- off.width=canvas.width;
- off.height=canvas.height;
+  const maxW = canvas.width * 0.82;
+  const fs = calcFontSize(text, maxW, 90, 34);
 
- o.fillStyle="#fff";
- o.font="bold 120px Arial";
- o.textAlign="center";
- o.fillText(text,canvas.width/2,textY());
+  o.clearRect(0,0,off.width,off.height);
+  drawMultilineText(o, text, canvas.width/2, textY(), maxW, fs, fs*1.15, "#fff");
 
- const img=o.getImageData(0,0,off.width,off.height);
+  const img = o.getImageData(0,0,off.width,off.height);
 
- for(let y=0;y<off.height;y+=8){
-  for(let x=0;x<off.width;x+=8){
-    let i=(y*off.width+x)*4;
-    if(img.data[i+3]>128){
-      cloud.push({
-        x,y,
-        r:6 + Math.random()*6
-      });
+  const step = 7;
+
+  for(let y=0; y<off.height; y+=step){
+    for(let x=0; x<off.width; x+=step){
+      const i = (y * off.width + x) * 4;
+      if(img.data[i+3] > 128){
+        cloud.push({
+          x,
+          y,
+          r: 5 + Math.random()*5,
+          dx:(Math.random()-0.5)*1.2,
+          dy:(Math.random()-0.5)*0.8
+        });
+      }
     }
   }
- }
 }
 
 function drawCloud(){
+  ctx.save();
 
- cloud.forEach(p=>{
-   let g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
-   g.addColorStop(0,"rgba(255,255,255,0.9)");
-   g.addColorStop(1,"rgba(255,255,255,0)");
+  cloud.forEach(p=>{
+    const x = p.x + p.dx;
+    const y = p.y + p.dy;
 
-   ctx.fillStyle=g;
-   ctx.beginPath();
-   ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-   ctx.fill();
- });
+    const g = ctx.createRadialGradient(x,y,0,x,y,p.r);
+    g.addColorStop(0, "rgba(255,255,255,0.95)");
+    g.addColorStop(0.55, "rgba(220,225,255,0.55)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
 
- drawCoreText(); // 🔥 핵심
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x,y,p.r,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  ctx.restore();
 }
 
-// ================= FIREWORK =================
-let fireworks=[];
+// ================= FIREWORKS =================
+let fireworks = [];
 
-function explode(){
+function launchFirework(){
+  const x = canvas.width * (0.15 + Math.random()*0.7);
+  const targetY = canvas.height * (0.12 + Math.random()*0.23);
 
- let x=Math.random()*canvas.width;
- let y=Math.random()*canvas.height*0.3; // 위쪽만
-
- for(let i=0;i<70;i++){
-   let a=Math.random()*Math.PI*2;
-   let s=Math.random()*3+1;
-
-   fireworks.push({
-     x,y,
-     vx:Math.cos(a)*s,
-     vy:Math.sin(a)*s,
-     life:70
-   });
- }
+  fireworks.push({
+    type:"rocket",
+    x,
+    y:canvas.height,
+    targetY,
+    vx:(Math.random()-0.5)*0.6,
+    vy:-6.5-Math.random()*2
+  });
 }
 
-setInterval(()=>{ if(effStyle==="fireworks") explode(); },1200);
+setInterval(()=>{
+  if(effStyle==="fireworks") launchFirework();
+}, 900);
+
+function explodeFirework(x,y){
+  const colors = ["#ff4d6d","#ff8c42","#ffd166","#ffffff","#66ccff"];
+
+  for(let i=0;i<70;i++){
+    const a = Math.random()*Math.PI*2;
+    const s = 1.2 + Math.random()*3.2;
+    fireworks.push({
+      type:"spark",
+      x,y,
+      vx:Math.cos(a)*s,
+      vy:Math.sin(a)*s,
+      life:65,
+      maxLife:65,
+      color:colors[Math.floor(Math.random()*colors.length)]
+    });
+  }
+}
 
 function drawFireworks(){
+  ctx.save();
 
- fireworks.forEach((p,i)=>{
-   p.x+=p.vx;
-   p.y+=p.vy;
-   p.vy+=0.02;
-   p.life--;
+  fireworks.forEach((p,i)=>{
+    if(p.type==="rocket"){
+      p.x += p.vx;
+      p.y += p.vy;
 
-   ctx.globalAlpha=p.life/70;
-   ctx.fillStyle="#ff4d4d";
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
 
-   ctx.beginPath();
-   ctx.arc(p.x,p.y,1.8,0,Math.PI*2);
-   ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x,p.y+22);
+      ctx.stroke();
 
-   if(p.life<=0) fireworks.splice(i,1);
- });
+      if(p.y <= p.targetY){
+        explodeFirework(p.x,p.y);
+        fireworks.splice(i,1);
+      }
+    }else{
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.035;
+      p.vx *= 0.985;
+      p.vy *= 0.985;
+      p.life--;
 
- ctx.globalAlpha=1;
+      const a = p.life / p.maxLife;
+
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 2.0;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = p.color;
+
+      ctx.beginPath();
+      ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x - p.vx*3.3, p.y - p.vy*3.3);
+      ctx.stroke();
+
+      if(p.life <= 0){
+        fireworks.splice(i,1);
+      }
+    }
+  });
+
+  ctx.restore();
 }
 
 // ================= AURORA =================
+let auroraT = 0;
+
 function drawAurora(){
+  auroraT += 0.012;
 
- const h=canvas.height*0.3;
+  const topH = canvas.height * 0.34;
 
- ctx.globalAlpha=0.25;
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.filter = "blur(5px)";
+  ctx.globalAlpha = 0.75;
 
- for(let i=0;i<4;i++){
+  for(let band=0; band<4; band++){
+    ctx.beginPath();
 
-   let x=i*canvas.width/4;
+    for(let x=0; x<=canvas.width; x+=5){
+      const y =
+        topH * (0.28 + band*0.12) +
+        Math.sin(x*0.009 + auroraT*2 + band)*24 +
+        Math.sin(x*0.018 + auroraT*1.2 + band*2)*12;
 
-   let g=ctx.createLinearGradient(x,0,x,h);
+      if(x===0) ctx.moveTo(x,y);
+      else ctx.lineTo(x,y);
+    }
 
-   g.addColorStop(0,"rgba(0,255,200,0.5)");
-   g.addColorStop(0.5,"rgba(180,0,255,0.4)");
-   g.addColorStop(1,"transparent");
+    ctx.lineTo(canvas.width, 0);
+    ctx.lineTo(0, 0);
+    ctx.closePath();
 
-   ctx.fillStyle=g;
-   ctx.fillRect(x,0,canvas.width/4,h);
- }
+    const g = ctx.createLinearGradient(0,0,0,topH);
+    g.addColorStop(0.00, "rgba(80,255,210,0.32)");
+    g.addColorStop(0.38, "rgba(120,255,180,0.25)");
+    g.addColorStop(0.65, "rgba(190,70,255,0.30)");
+    g.addColorStop(1.00, "rgba(0,0,0,0)");
 
- ctx.globalAlpha=1;
+    ctx.fillStyle = g;
+    ctx.fill();
+  }
+
+  ctx.restore();
 }
 
 // ================= START =================
 async function start(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"environment"},
+      audio:false
+    });
 
- let s=await navigator.mediaDevices.getUserMedia({video:true});
- video.srcObject=s;
- await video.play();
+    video.srcObject = stream;
+    await video.play();
 
- intro.style.display="none";
+    intro.style.display="none";
 
- await countdown();
+    await countdown();
 
- if(txtStyle==="drone") initDrone();
- if(txtStyle==="cloud") initCloud();
+    if(txtStyle==="drone") initDrone();
+    if(txtStyle==="cloud") initCloud();
 
- draw();
+    if(effStyle==="fireworks"){
+      launchFirework();
+      setTimeout(launchFirework, 400);
+    }
+
+    draw();
+
+  }catch(e){
+    alert("카메라 권한을 확인해주세요.");
+    console.error(e);
+  }
 }
 
 function countdown(){
- return new Promise(res=>{
-  let c=3;
-  count.innerText=c;
-  let t=setInterval(()=>{
-   c--;
-   if(c>0) count.innerText=c;
-   else{count.innerText="";clearInterval(t);res();}
-  },1000);
- });
+  return new Promise(res=>{
+    let c = 3;
+    count.innerText = c;
+
+    const t = setInterval(()=>{
+      c--;
+      if(c>0){
+        count.innerText = c;
+      }else{
+        count.innerText = "";
+        clearInterval(t);
+        res();
+      }
+    },1000);
+  });
 }
 
 // ================= DRAW =================
 function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
- ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(effStyle==="fireworks"){
+    drawFireworks();
+  }else if(effStyle==="aurora"){
+    drawAurora();
+  }
 
- if(effStyle==="fireworks") drawFireworks();
- else if(effStyle==="aurora") drawAurora();
+  if(txtStyle==="drone"){
+    drawDrone();
+  }else if(txtStyle==="cloud"){
+    drawCloud();
+  }else{
+    drawStandard();
+  }
 
- if(txtStyle==="drone") drawDrone();
- else if(txtStyle==="cloud") drawCloud();
- else drawCoreText();
-
- requestAnimationFrame(draw);
+  requestAnimationFrame(draw);
 }
 
 // ================= APP =================
 function goApp(){
- alert("APP 연결 예정");
+  alert("APP 연결 예정");
 }
-
 </script>
 </body>
 </html>
