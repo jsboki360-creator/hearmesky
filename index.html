@@ -69,21 +69,6 @@ font-size:100px;
 color:white;
 z-index:5;
 }
-
-#captureBtn{
-position:fixed;
-bottom:30px;
-left:50%;
-transform:translateX(-50%);
-z-index:20;
-padding:14px 28px;
-border:none;
-border-radius:30px;
-font-size:18px;
-background:#ffffff;
-color:black;
-box-shadow:0 0 15px rgba(255,255,255,0.6);
-}
 </style>
 </head>
 
@@ -100,8 +85,6 @@ box-shadow:0 0 15px rgba(255,255,255,0.6);
 <video id="video" autoplay playsinline muted></video>
 <canvas id="c"></canvas>
 <div id="count"></div>
-
-<button id="captureBtn" onclick="capture()">📸 CAPTURE</button>
 
 <script>
 
@@ -129,13 +112,39 @@ function textY(){
  return canvas.height * 0.32;
 }
 
+// ================= TEXT 줄바꿈 =================
+function drawMultiline(ctx,text,x,y,maxWidth,lineHeight){
+
+ let words=text.split(" ");
+ let line="";
+ let lines=[];
+
+ for(let w of words){
+   let test=line+w+" ";
+   if(ctx.measureText(test).width>maxWidth){
+     lines.push(line);
+     line=w+" ";
+   }else{
+     line=test;
+   }
+ }
+ lines.push(line);
+
+ let startY=y-(lines.length*lineHeight)/2;
+
+ lines.forEach((l,i)=>{
+   ctx.fillText(l.trim(),x,startY+i*lineHeight);
+ });
+}
+
 // ================= STANDARD =================
 function drawStandard(){
  ctx.fillStyle="#ffffff";
- ctx.font="bold 48px Arial";
+ ctx.font="bold 42px Arial";
  ctx.textAlign="center";
  ctx.textBaseline="middle";
- ctx.fillText(text, canvas.width/2, textY());
+
+ drawMultiline(ctx,text,canvas.width/2,textY(),canvas.width*0.8,55);
 }
 
 // ================= DRONE =================
@@ -156,7 +165,7 @@ function initDrone(){
  o.textAlign="center";
  o.textBaseline="middle";
 
- o.fillText(text, canvas.width/2, textY());
+ drawMultiline(o,text,canvas.width/2,textY(),canvas.width*0.8,size*1.1);
 
  const img=o.getImageData(0,0,off.width,off.height);
 
@@ -270,39 +279,6 @@ function drawFireworks(){
 
    if(s.life<=0) sparks.splice(i,1);
  });
-}
-
-// ================= CAPTURE + SHARE =================
-async function capture(){
-
- const temp=document.createElement("canvas");
- temp.width=canvas.width;
- temp.height=canvas.height;
- const tctx=temp.getContext("2d");
-
- tctx.drawImage(video,0,0);
- tctx.drawImage(canvas,0,0);
-
- temp.toBlob(async (blob)=>{
-
-   const file=new File([blob],"hearmesky.png",{type:"image/png"});
-
-   // 🔥 OS 공유 바로 실행
-   if(navigator.canShare && navigator.canShare({files:[file]})){
-     await navigator.share({
-       files:[file],
-       title:"HearMeSKY",
-       text:"메시지를 확인해보세요!"
-     });
-   }else{
-     // PC fallback
-     const link=document.createElement("a");
-     link.href=URL.createObjectURL(blob);
-     link.download="hearmesky.png";
-     link.click();
-   }
-
- }, "image/png");
 }
 
 // ================= START =================
