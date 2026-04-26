@@ -2,102 +2,78 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 html,body{
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:black;
-  font-family:Arial, sans-serif;
+margin:0;
+padding:0;
+overflow:hidden;
+background:black;
+font-family:Arial;
 }
 
 video{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100vw;
-  height:100vh;
-  object-fit:cover;
-  z-index:0;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+object-fit:cover;
+z-index:0;
 }
 
 canvas{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100vw;
-  height:100vh;
-  z-index:1;
-  pointer-events:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+z-index:1;
 }
 
 #intro{
-  position:fixed;
-  inset:0;
-  background:black;
-  z-index:10;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  color:white;
+position:fixed;
+width:100%;
+height:100%;
+background:black;
+z-index:10;
+display:flex;
+justify-content:center;
+align-items:center;
+color:white;
 }
 
-.introBox{
-  text-align:center;
-}
-
-.introBox h1{
-  font-size:42px;
-  margin-bottom:30px;
-}
+.introBox{text-align:center;}
 
 button{
-  display:block;
-  margin:12px auto;
-  padding:15px 30px;
-  border-radius:30px;
-  border:none;
-  font-size:18px;
-  width:220px;
+display:block;
+margin:10px auto;
+padding:15px 30px;
+border-radius:30px;
+border:none;
+font-size:18px;
+width:220px;
 }
 
-.startBtn{
-  background:red;
-  color:white;
-}
-
-.appBtn{
-  background:white;
-  color:black;
-}
+.startBtn{background:red;color:white;}
 
 #camBtn{
-  position:fixed;
-  right:15px;
-  bottom:25px;
-  z-index:20;
-  width:auto;
-  padding:12px 18px;
-  border-radius:25px;
-  background:rgba(0,0,0,0.55);
-  color:white;
-  border:1px solid rgba(255,255,255,0.4);
-  font-size:15px;
-  display:none;
+position:fixed;
+bottom:20px;
+right:20px;
+z-index:20;
+display:none;
 }
 
 #count{
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  font-size:90px;
-  color:white;
-  z-index:5;
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+font-size:100px;
+color:white;
+z-index:5;
 }
 </style>
 </head>
@@ -108,7 +84,6 @@ button{
   <div class="introBox">
     <h1>HearMeSKY</h1>
     <button class="startBtn" onclick="start()">START</button>
-    <button class="appBtn">APP 가입</button>
   </div>
 </div>
 
@@ -119,460 +94,240 @@ button{
 <button id="camBtn" onclick="switchCamera()">카메라 전환</button>
 
 <script>
+
 // ================= PARAM =================
 const p = new URLSearchParams(location.search);
-
-const text = decodeURIComponent(p.get("msg") || "WE LOVE GINA").replaceAll("_"," ");
-const txtStyle = p.get("txtsty") || "standard";
-const effStyle = p.get("effsty") || "none";
+const text = (p.get("msg")||"WE LOVE GINA").replaceAll("_"," ");
+const txtStyle = p.get("txtsty")||"drone";
+const effStyle = p.get("effsty")||"fireworks";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const intro = document.getElementById("intro");
-const camBtn = document.getElementById("camBtn");
 
-// ================= CAMERA =================
-let currentFacing = "environment"; // 후면 먼저
 let stream = null;
-
-async function startCamera(){
-
-  if(stream){
-    stream.getTracks().forEach(t => t.stop());
-    stream = null;
-  }
-
-  try{
-    stream = await navigator.mediaDevices.getUserMedia({
-      video:{
-        facingMode:{ ideal: currentFacing },
-        width:{ ideal:1280 },
-        height:{ ideal:720 }
-      },
-      audio:false
-    });
-  }
-  catch(e){
-    // 일부 브라우저에서 environment 실패 시 기본 카메라
-    stream = await navigator.mediaDevices.getUserMedia({
-      video:true,
-      audio:false
-    });
-  }
-
-  video.srcObject = stream;
-  await video.play();
-}
-
-async function switchCamera(){
-  currentFacing = currentFacing === "environment" ? "user" : "environment";
-  await startCamera();
-}
+let currentFacing = "environment";
+let started = false;
 
 // ================= RESIZE =================
 function resize(){
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.floor(innerWidth * dpr);
-  canvas.height = Math.floor(innerHeight * dpr);
-  canvas.style.width = innerWidth + "px";
-  canvas.style.height = innerHeight + "px";
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-
-  if(txtStyle==="drone") initDrone();
-  if(txtStyle==="cloud") initCloud();
+ canvas.width=innerWidth;
+ canvas.height=innerHeight;
 }
-window.addEventListener("resize", resize);
 resize();
+onresize=resize;
 
-function textY(){
-  return innerHeight * 0.34;
+// ================= CAMERA =================
+async function startCamera(){
+
+ if(!stream){
+   stream = await navigator.mediaDevices.getUserMedia({
+     video:true,
+     audio:false
+   });
+ }
+
+ const devices = await navigator.mediaDevices.enumerateDevices();
+ const cams = devices.filter(d=>d.kind==="videoinput");
+
+ let device = cams.find(d =>
+   currentFacing==="environment"
+   ? d.label.toLowerCase().includes("back")
+   : d.label.toLowerCase().includes("front")
+ );
+
+ if(!device) device = cams[0];
+
+ const newStream = await navigator.mediaDevices.getUserMedia({
+   video:{deviceId:{exact:device.deviceId}}
+ });
+
+ video.srcObject = newStream;
+ await video.play();
 }
 
-// ================= COMMON TEXT FIT =================
-function getFitFont(c, txt, maxWidth, maxSize=110, minSize=18){
-  let size = maxSize;
-
-  while(size > minSize){
-    c.font = "bold " + size + "px Arial";
-    if(c.measureText(txt).width <= maxWidth) break;
-    size -= 2;
-  }
-
-  return size;
+async function switchCamera(){
+ currentFacing = currentFacing==="environment" ? "user" : "environment";
+ await startCamera();
 }
 
-function makeTextLines(c, txt, maxWidth, fontSize){
-  c.font = "bold " + fontSize + "px Arial";
+// ================= COUNTDOWN =================
+async function countdown(){
+ const el = document.getElementById("count");
 
-  const words = txt.split(" ");
-  const lines = [];
-  let line = "";
+ for(let i=3;i>=1;i--){
+   el.innerText=i;
+   await new Promise(r=>setTimeout(r,700));
+ }
 
-  for(const w of words){
-    const test = line ? line + " " + w : w;
-
-    if(c.measureText(test).width > maxWidth && line){
-      lines.push(line);
-      line = w;
-    }else{
-      line = test;
-    }
-  }
-
-  if(line) lines.push(line);
-
-  return lines;
+ el.innerText="";
 }
 
-// ================= STANDARD TEXT =================
+// ================= TEXT =================
+function getFontSize(txt,maxW){
+ let size=120;
+ while(size>20){
+   ctx.font="bold "+size+"px Arial";
+   if(ctx.measureText(txt).width<maxW) break;
+   size-=2;
+ }
+ return size;
+}
+
 function drawText(){
-  const maxWidth = innerWidth * 0.82;
-  const fontSize = getFitFont(ctx, text, maxWidth, 78, 22);
-  const lines = makeTextLines(ctx, text, maxWidth, fontSize);
+ let maxW=canvas.width*0.8;
+ let size=getFontSize(text,maxW);
 
-  ctx.save();
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "#fff";
-  ctx.shadowColor = "rgba(255,255,255,0.8)";
-  ctx.shadowBlur = 12;
-  ctx.font = "bold " + fontSize + "px Arial";
+ ctx.font="bold "+size+"px Arial";
+ ctx.fillStyle="#fff";
+ ctx.textAlign="center";
 
-  const gap = fontSize * 1.15;
-  const startY = textY() - ((lines.length - 1) * gap) / 2;
-
-  lines.forEach((l,i)=>{
-    ctx.fillText(l, innerWidth/2, startY + i*gap);
-  });
-
-  ctx.restore();
+ ctx.fillText(text,canvas.width/2,canvas.height*0.4);
 }
 
 // ================= DRONE =================
-let drone = [];
+let drone=[];
 
 function initDrone(){
-  drone = [];
+ drone=[];
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
 
-  const off = document.createElement("canvas");
-  const o = off.getContext("2d");
+ off.width=canvas.width;
+ off.height=canvas.height;
 
-  off.width = Math.floor(innerWidth);
-  off.height = Math.floor(innerHeight);
+ let size=getFontSize(text,canvas.width*0.8);
 
-  const maxWidth = innerWidth * 0.78;
-  const fontSize = getFitFont(o, text, maxWidth, 110, 24);
-  const lines = makeTextLines(o, text, maxWidth, fontSize);
+ o.fillStyle="#fff";
+ o.font="bold "+size+"px Arial";
+ o.textAlign="center";
+ o.fillText(text,canvas.width/2,canvas.height*0.4);
 
-  o.clearRect(0,0,off.width,off.height);
-  o.fillStyle = "#fff";
-  o.font = "bold " + fontSize + "px Arial";
-  o.textAlign = "center";
-  o.textBaseline = "middle";
+ const img=o.getImageData(0,0,off.width,off.height);
 
-  const gap = fontSize * 1.12;
-  const startY = textY() - ((lines.length - 1) * gap) / 2;
-
-  lines.forEach((l,i)=>{
-    o.fillText(l, innerWidth/2, startY + i*gap);
-  });
-
-  const img = o.getImageData(0,0,off.width,off.height);
-  const step = Math.max(5, Math.floor(fontSize / 12));
-
-  for(let y=0; y<off.height; y+=step){
-    for(let x=0; x<off.width; x+=step){
-      const idx = (y * off.width + x) * 4;
-      if(img.data[idx+3] > 120){
-        drone.push({
-          x:x,
-          y:y,
-          r:Math.max(1.6, step * 0.23),
-          tw:Math.random() * Math.PI * 2
-        });
-      }
-    }
+ for(let y=0;y<off.height;y+=6){
+  for(let x=0;x<off.width;x+=6){
+   let i=(y*off.width+x)*4;
+   if(img.data[i+3]>128){
+     drone.push({x,y});
+   }
   }
+ }
 }
 
 function drawDrone(){
-  ctx.save();
-  ctx.fillStyle = "#fff";
-  ctx.shadowColor = "rgba(255,255,255,0.95)";
-  ctx.shadowBlur = 8;
-
-  const now = performance.now() * 0.004;
-
-  drone.forEach(p=>{
-    const a = 0.65 + Math.sin(now + p.tw) * 0.25;
-    ctx.globalAlpha = a;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-    ctx.fill();
-  });
-
-  ctx.restore();
-  ctx.globalAlpha = 1;
-}
-
-// ================= CLOUD =================
-let cloud = [];
-
-function initCloud(){
-  cloud = [];
-
-  const off = document.createElement("canvas");
-  const o = off.getContext("2d");
-
-  off.width = Math.floor(innerWidth);
-  off.height = Math.floor(innerHeight);
-
-  const maxWidth = innerWidth * 0.78;
-  const fontSize = getFitFont(o, text, maxWidth, 105, 24);
-  const lines = makeTextLines(o, text, maxWidth, fontSize);
-
-  o.clearRect(0,0,off.width,off.height);
-  o.fillStyle = "#fff";
-  o.font = "bold " + fontSize + "px Arial";
-  o.textAlign = "center";
-  o.textBaseline = "middle";
-
-  const gap = fontSize * 1.12;
-  const startY = textY() - ((lines.length - 1) * gap) / 2;
-
-  lines.forEach((l,i)=>{
-    o.fillText(l, innerWidth/2, startY + i*gap);
-  });
-
-  const img = o.getImageData(0,0,off.width,off.height);
-  const step = Math.max(6, Math.floor(fontSize / 11));
-
-  for(let y=0; y<off.height; y+=step){
-    for(let x=0; x<off.width; x+=step){
-      const idx = (y * off.width + x) * 4;
-      if(img.data[idx+3] > 120){
-        cloud.push({
-          x:x,
-          y:y,
-          r:step * (0.65 + Math.random()*0.55),
-          dx:(Math.random()-0.5)*1.5,
-          phase:Math.random()*Math.PI*2
-        });
-      }
-    }
-  }
-}
-
-function drawCloud(){
-  const now = performance.now() * 0.001;
-
-  ctx.save();
-
-  cloud.forEach(p=>{
-    const x = p.x + Math.sin(now + p.phase) * 2.5;
-    const y = p.y + Math.cos(now*0.7 + p.phase) * 1.5;
-
-    const g = ctx.createRadialGradient(x,y,0,x,y,p.r);
-    g.addColorStop(0,"rgba(255,255,255,0.82)");
-    g.addColorStop(0.55,"rgba(255,255,255,0.35)");
-    g.addColorStop(1,"rgba(255,255,255,0)");
-
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x,y,p.r,0,Math.PI*2);
-    ctx.fill();
-  });
-
-  ctx.restore();
+ ctx.fillStyle="#fff";
+ drone.forEach(p=>{
+   ctx.fillRect(p.x,p.y,2,2);
+ });
 }
 
 // ================= FIREWORK =================
-let fireworks = [];
-let lastLaunch = 0;
+let fireworks=[];
 
 function launchFirework(){
-  const colors = ["#ff4040","#ffd700","#66ccff","#cc66ff","#ffffff","#00ffcc"];
-  const color = colors[Math.floor(Math.random()*colors.length)];
+ let x=Math.random()*canvas.width;
+ let targetY=canvas.height*0.3;
 
-  const x = innerWidth * (0.15 + Math.random()*0.7);
-  const targetY = innerHeight * (0.16 + Math.random()*0.22);
-
-  fireworks.push({
-    type:"rocket",
-    x:x,
-    y:innerHeight + 20,
-    vx:(Math.random()-0.5)*1.0,
-    vy:-8 - Math.random()*2,
-    targetY:targetY,
-    color:color
-  });
+ fireworks.push({
+   type:"rocket",
+   x,
+   y:canvas.height,
+   vy:-8,
+   targetY
+ });
 }
 
-function explodeFirework(x,y,color){
-  const arms = 18;
-  const countPerArm = 4;
+function explode(x,y){
+ const colors=["#ff4040","#ffd700","#66ccff","#cc66ff","#fff"];
+ const color=colors[Math.floor(Math.random()*colors.length)];
 
-  for(let i=0; i<arms; i++){
-    const base = (Math.PI*2/arms)*i;
+ for(let i=0;i<20;i++){
+   let angle=Math.random()*Math.PI*2;
+   let speed=2+Math.random()*3;
 
-    for(let j=0; j<countPerArm; j++){
-      const angle = base + (Math.random()-0.5)*0.22;
-      const speed = 2.0 + Math.random()*3.2;
-
-      fireworks.push({
-        type:"spark",
-        x:x,
-        y:y,
-        vx:Math.cos(angle)*speed,
-        vy:Math.sin(angle)*speed,
-        life:45 + Math.random()*15,
-        maxLife:60,
-        color:color
-      });
-    }
-  }
+   fireworks.push({
+     type:"spark",
+     x,y,
+     vx:Math.cos(angle)*speed,
+     vy:Math.sin(angle)*speed,
+     life:40,
+     color
+   });
+ }
 }
 
 function drawFireworks(){
-  if(performance.now() - lastLaunch > 550 && fireworks.length < 350){
-    launchFirework();
-    lastLaunch = performance.now();
+
+ let next=[];
+
+ if(fireworks.length<50) launchFirework();
+
+ fireworks.forEach(p=>{
+
+  if(p.type==="rocket"){
+   p.y+=p.vy;
+
+   ctx.fillStyle="#fff";
+   ctx.fillRect(p.x,p.y,3,6);
+
+   if(p.y<=p.targetY){
+     explode(p.x,p.y);
+   }else next.push(p);
+
+  }else{
+   p.x+=p.vx;
+   p.y+=p.vy;
+   p.vy+=0.05;
+   p.life--;
+
+   ctx.globalAlpha=p.life/40;
+   ctx.strokeStyle=p.color;
+   ctx.beginPath();
+   ctx.moveTo(p.x,p.y);
+   ctx.lineTo(p.x-p.vx*2,p.y-p.vy*2);
+   ctx.stroke();
+
+   if(p.life>0) next.push(p);
   }
 
-  const next = [];
+ });
 
-  ctx.save();
-  ctx.lineWidth = 2;
-  ctx.lineCap = "round";
-
-  for(const p of fireworks){
-
-    if(p.type === "rocket"){
-      p.x += p.vx;
-      p.y += p.vy;
-
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 12;
-      ctx.fillRect(p.x, p.y, 3, 9);
-
-      if(p.y <= p.targetY){
-        explodeFirework(p.x, p.y, p.color);
-      }else{
-        next.push(p);
-      }
-    }
-    else{
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.045;
-      p.vx *= 0.985;
-      p.vy *= 0.985;
-      p.life--;
-
-      const alpha = Math.max(0, p.life / p.maxLife);
-
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = p.color;
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 8;
-
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x - p.vx*3.5, p.y - p.vy*3.5);
-      ctx.stroke();
-
-      if(p.life > 0){
-        next.push(p);
-      }
-    }
-  }
-
-  ctx.restore();
-  ctx.globalAlpha = 1;
-
-  fireworks = next;
-}
-
-// ================= AURORA =================
-let auroraT = 0;
-
-function drawAurora(){
-  auroraT += 0.008;
-
-  const h = innerHeight * 0.34;
-
-  ctx.save();
-  ctx.globalAlpha = 0.42;
-
-  for(let i=0; i<3; i++){
-    ctx.beginPath();
-
-    for(let x=0; x<=innerWidth; x+=8){
-      const y =
-        Math.sin(x*0.008 + auroraT + i) * 24 +
-        Math.sin(x*0.017 + auroraT*0.8) * 9 +
-        h * (0.28 + i*0.22);
-
-      if(x===0) ctx.moveTo(x,y);
-      else ctx.lineTo(x,y);
-    }
-
-    ctx.lineTo(innerWidth,0);
-    ctx.lineTo(0,0);
-    ctx.closePath();
-
-    const g = ctx.createLinearGradient(0,0,0,h);
-    g.addColorStop(0,"rgba(0,255,210,0.45)");
-    g.addColorStop(0.5,"rgba(190,70,255,0.35)");
-    g.addColorStop(1,"rgba(255,255,255,0)");
-
-    ctx.fillStyle = g;
-    ctx.fill();
-  }
-
-  ctx.restore();
+ fireworks=next;
+ ctx.globalAlpha=1;
 }
 
 // ================= START =================
 async function start(){
-  await startCamera();
 
-  intro.style.display = "none";
-  camBtn.style.display = "block";
+ if(started) return;
+ started=true;
 
-  if(txtStyle === "drone") initDrone();
-  if(txtStyle === "cloud") initCloud();
+ await startCamera();
 
-  draw();
+ document.getElementById("intro").style.display="none";
+ document.getElementById("camBtn").style.display="block";
+
+ await countdown();
+
+ if(txtStyle==="drone") initDrone();
+
+ draw();
 }
 
 // ================= DRAW =================
 function draw(){
-  ctx.clearRect(0,0,innerWidth,innerHeight);
 
-  if(effStyle === "fireworks"){
-    drawFireworks();
-  }
-  else if(effStyle === "aurora"){
-    drawAurora();
-  }
+ ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  if(txtStyle === "drone"){
-    drawDrone();
-  }
-  else if(txtStyle === "cloud"){
-    drawCloud();
-  }
-  else{
-    drawText();
-  }
+ if(effStyle==="fireworks") drawFireworks();
 
-  requestAnimationFrame(draw);
+ if(txtStyle==="drone") drawDrone();
+ else drawText();
+
+ requestAnimationFrame(draw);
 }
-</script>
 
+</script>
 </body>
 </html>
