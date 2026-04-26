@@ -5,37 +5,93 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-html,body{
- margin:0;
- padding:0;
- background:black;
- overflow:hidden;
- font-family:Arial;
+body {
+  margin:0;
+  overflow:hidden;
+  background:black;
+  font-family:Arial;
 }
 
-canvas{
- position:fixed;
- top:0;left:0;
- width:100%;
- height:100%;
+video {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  z-index:0;
+}
+
+canvas {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:1;
+}
+
+#intro{
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:black;
+  z-index:10;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:white;
+  flex-direction:column;
+}
+
+button{
+  margin:10px;
+  padding:15px 30px;
+  border-radius:30px;
+  border:none;
+  font-size:18px;
+}
+
+.startBtn{background:red;color:white;}
+.appBtn{background:white;color:black;}
+
+#count{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:100px;
+  color:white;
+  z-index:5;
 }
 </style>
 </head>
 
 <body>
 
+<div id="intro">
+  <h1>HearMeSKY</h1>
+  <button class="startBtn" onclick="start()">START</button>
+  <button class="appBtn">APP 가입</button>
+</div>
+
+<video id="video" autoplay playsinline muted></video>
 <canvas id="c"></canvas>
+<div id="count"></div>
 
 <script>
 
 // ================= PARAM =================
 const p = new URLSearchParams(location.search);
+const text = (p.get("msg")||"WE LOVE GINA").replaceAll("_"," ");
+const txtStyle = p.get("txtsty")||"standard";
+const effStyle = p.get("effsty")||"none";
 
-const text = (p.get("msg") || "WE LOVE GINA").replaceAll("_"," ");
-const txtStyle = p.get("txtsty") || "standard";
-
+const video = document.getElementById("video");
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
+
+let stream = null;
 
 // ================= RESIZE =================
 function resize(){
@@ -45,179 +101,68 @@ function resize(){
 resize();
 onresize = resize;
 
-// ================= TEXT SPLIT =================
-function getLines(){
+// ================= CAMERA =================
+async function initCamera(){
+ if(stream) return;
 
- // 단어 기준 줄바꿈
+ stream = await navigator.mediaDevices.getUserMedia({
+   video:{facingMode:"environment"},
+   audio:false
+ });
+
+ video.srcObject = stream;
+ await video.play();
+}
+
+// ================= COUNTDOWN =================
+async function countdown(){
+ const el = document.getElementById("count");
+
+ for(let i=3;i>=1;i--){
+  el.innerText = i;
+  await new Promise(r=>setTimeout(r,700));
+ }
+
+ el.innerText = "";
+}
+
+// ================= TEXT (기본) =================
+function drawText(){
+
+ ctx.fillStyle="#fff";
+ ctx.textAlign="center";
+ ctx.font="bold 80px Arial";
+
  let words = text.split(" ");
- let lines = [];
 
- if(words.length <= 2){
-   lines = [words.join(" ")];
- }else{
-   let half = Math.ceil(words.length / 2);
-   lines.push(words.slice(0,half).join(" "));
-   lines.push(words.slice(half).join(" "));
- }
-
- return lines;
-}
-
-// ================= STANDARD =================
-function drawStandard(){
-
- let lines = getLines();
-
- ctx.fillStyle = "#fff";
- ctx.textAlign = "center";
-
- let size = 90;
- ctx.font = "bold " + size + "px Arial";
-
- lines.forEach((l,i)=>{
-   ctx.fillText(l, canvas.width/2, canvas.height*0.4 + i*100);
+ words.forEach((w,i)=>{
+   ctx.fillText(w, canvas.width/2, canvas.height*0.4 + i*90);
  });
 }
 
-// ================= CLOUD =================
-let cloud = [];
+// ================= START =================
+async function start(){
 
-function initCloud(){
+ await initCamera();
 
- cloud = [];
+ document.getElementById("intro").style.display="none";
 
- const off = document.createElement("canvas");
- const o = off.getContext("2d");
+ await countdown();
 
- off.width = canvas.width;
- off.height = canvas.height;
-
- let lines = getLines();
-
- o.fillStyle = "#fff";
- o.textAlign = "center";
- o.font = "bold 90px Arial";
-
- lines.forEach((l,i)=>{
-   o.fillText(l, canvas.width/2, canvas.height*0.4 + i*100);
- });
-
- let img = o.getImageData(0,0,off.width,off.height);
-
- for(let y=0;y<off.height;y+=6){
-  for(let x=0;x<off.width;x+=6){
-
-    let i=(y*off.width+x)*4;
-
-    if(img.data[i+3] > 120){
-
-      cloud.push({
-        x:x,
-        y:y,
-        r:10 + Math.random()*12
-      });
-    }
-  }
- }
+ draw();
 }
-
-function drawCloud(){
-
- // 🔥 구름 덩어리
- cloud.forEach(p=>{
-
-   let g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
-
-   g.addColorStop(0,"rgba(255,255,255,0.9)");
-   g.addColorStop(0.5,"rgba(255,255,255,0.4)");
-   g.addColorStop(1,"rgba(255,255,255,0)");
-
-   ctx.fillStyle = g;
-
-   ctx.beginPath();
-   ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-   ctx.fill();
- });
-
- // 🔥 중앙 선명 보강 (핵심)
- ctx.fillStyle = "rgba(255,255,255,0.85)";
- ctx.textAlign = "center";
- ctx.font = "bold 90px Arial";
-
- let lines = getLines();
- lines.forEach((l,i)=>{
-   ctx.fillText(l, canvas.width/2, canvas.height*0.4 + i*100);
- });
-}
-
-// ================= DRONE =================
-let drone = [];
-
-function initDrone(){
-
- drone = [];
-
- const off = document.createElement("canvas");
- const o = off.getContext("2d");
-
- off.width = canvas.width;
- off.height = canvas.height;
-
- let lines = getLines();
-
- o.fillStyle = "#fff";
- o.textAlign = "center";
- o.font = "bold 90px Arial";
-
- lines.forEach((l,i)=>{
-   o.fillText(l, canvas.width/2, canvas.height*0.4 + i*100);
- });
-
- let img = o.getImageData(0,0,off.width,off.height);
-
- for(let y=0;y<off.height;y+=8){
-  for(let x=0;x<off.width;x+=8){
-
-    let i=(y*off.width+x)*4;
-
-    if(img.data[i+3] > 120){
-
-      drone.push({x,y});
-    }
-  }
- }
-}
-
-function drawDrone(){
-
- ctx.fillStyle = "#fff";
-
- drone.forEach(p=>{
-   ctx.beginPath();
-   ctx.arc(p.x,p.y,2.5,0,Math.PI*2);
-   ctx.fill();
- });
-}
-
-// ================= INIT =================
-if(txtStyle === "cloud") initCloud();
-if(txtStyle === "drone") initDrone();
 
 // ================= DRAW =================
 function draw(){
 
  ctx.clearRect(0,0,canvas.width,canvas.height);
 
- if(txtStyle === "cloud") drawCloud();
- else if(txtStyle === "drone") drawDrone();
- else drawStandard();
+ // 🔥 텍스트만 (아직 효과 X)
+ drawText();
 
  requestAnimationFrame(draw);
 }
 
-draw();
-
 </script>
-
 </body>
 </html>
