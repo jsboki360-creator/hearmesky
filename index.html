@@ -65,19 +65,21 @@ font-size:100px;color:white;z-index:5;
 
 <script>
 
-// ===== PARAM =====
+// ================= PARAM =================
 const p = new URLSearchParams(location.search);
 const text = (p.get("msg")||"LOVE YOU").replaceAll("_"," ");
+const txtStyle = p.get("txtsty")||"drone";
+const effStyle = p.get("effsty")||"fireworks";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
-let stream = null;
-let currentFacing = "environment";
-let started = false;
+let stream=null;
+let currentFacing="environment";
+let started=false;
 
-// ===== RESIZE =====
+// ================= RESIZE =================
 function resize(){
  canvas.width=innerWidth;
  canvas.height=innerHeight;
@@ -85,9 +87,8 @@ function resize(){
 resize();
 onresize=resize;
 
-// ===== CAMERA (🔥 1번만 요청) =====
+// ================= CAMERA =================
 async function initCamera(){
-
  if(stream) return;
 
  stream = await navigator.mediaDevices.getUserMedia({
@@ -99,21 +100,15 @@ async function initCamera(){
  await video.play();
 }
 
-// ===== CAMERA SWITCH =====
 async function switchCamera(){
-
- currentFacing = currentFacing==="environment" ? "user" : "environment";
-
+ currentFacing = currentFacing==="environment"?"user":"environment";
  const track = stream.getVideoTracks()[0];
- await track.applyConstraints({
-   facingMode: currentFacing
- });
+ await track.applyConstraints({facingMode: currentFacing});
 }
 
-// ===== COUNTDOWN =====
+// ================= COUNTDOWN =================
 async function countdown(){
  const el=document.getElementById("count");
-
  for(let i=3;i>=1;i--){
   el.innerText=i;
   await new Promise(r=>setTimeout(r,700));
@@ -121,7 +116,7 @@ async function countdown(){
  el.innerText="";
 }
 
-// ===== TEXT =====
+// ================= TEXT =================
 function drawText(){
  let size=80;
  while(size>20){
@@ -129,41 +124,129 @@ function drawText(){
   if(ctx.measureText(text).width<canvas.width*0.8) break;
   size-=2;
  }
-
  ctx.fillStyle="#fff";
  ctx.textAlign="center";
  ctx.fillText(text,canvas.width/2,canvas.height*0.4);
 }
 
-// ===== FIREWORK =====
-let fw=[];
+// ================= DRONE =================
+let drone=[];
+function initDrone(){
+ drone=[];
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
+ off.width=canvas.width;
+ off.height=canvas.height;
 
-function launch(){
- fw.push({x:Math.random()*canvas.width,y:canvas.height,vy:-8});
+ o.fillStyle="#fff";
+ o.font="bold 100px Arial";
+ o.textAlign="center";
+ o.fillText(text,canvas.width/2,canvas.height*0.4);
+
+ const img=o.getImageData(0,0,off.width,off.height);
+
+ for(let y=0;y<off.height;y+=6){
+  for(let x=0;x<off.width;x+=6){
+   let i=(y*off.width+x)*4;
+   if(img.data[i+3]>128){
+     drone.push({x,y});
+   }
+  }
+ }
+}
+function drawDrone(){
+ ctx.fillStyle="#fff";
+ drone.forEach(p=>ctx.fillRect(p.x,p.y,2,2));
 }
 
-function explode(x,y){
- for(let i=0;i<20;i++){
-  let a=Math.random()*Math.PI*2;
-  let s=2+Math.random()*3;
-  fw.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:40});
+// ================= AURORA =================
+let t=0;
+function drawAurora(){
+ t+=0.01;
+ let h=canvas.height*0.35;
+
+ ctx.globalAlpha=0.35;
+
+ for(let i=0;i<3;i++){
+   ctx.beginPath();
+   for(let x=0;x<canvas.width;x+=5){
+     let y=Math.sin(x*0.01+t+i)*20 + h*(0.5+i*0.18);
+     ctx.lineTo(x,y);
+   }
+   ctx.lineTo(canvas.width,0);
+   ctx.lineTo(0,0);
+   ctx.closePath();
+
+   let g=ctx.createLinearGradient(0,0,0,h);
+   g.addColorStop(0,"rgba(0,255,200,0.4)");
+   g.addColorStop(0.5,"rgba(180,0,255,0.3)");
+   g.addColorStop(1,"transparent");
+
+   ctx.fillStyle=g;
+   ctx.fill();
+ }
+ ctx.globalAlpha=1;
+}
+
+// ================= FIREWORK =================
+let fireworks=[];
+let fwTimer=0;
+
+function getColor(){
+ const c=["#ff4040","#ffd700","#66ccff","#cc66ff","#fff"];
+ return c[Math.floor(Math.random()*c.length)];
+}
+
+function launchFirework(){
+ let x=canvas.width*(0.2+Math.random()*0.6);
+ let targetY=canvas.height*(0.3+Math.random()*0.2);
+
+ fireworks.push({
+   type:"rocket",
+   x:x,
+   y:canvas.height,
+   vy:-4-Math.random()*2,
+   targetY:targetY,
+   color:getColor()
+ });
+}
+
+function explodeFirework(x,y,color){
+ for(let i=0;i<30;i++){
+   let a=Math.random()*Math.PI*2;
+   let s=2+Math.random()*2;
+
+   fireworks.push({
+     type:"spark",
+     x,y,
+     vx:Math.cos(a)*s,
+     vy:Math.sin(a)*s,
+     life:60,
+     maxLife:60,
+     color
+   });
  }
 }
 
-function drawFire(){
+function drawFireworks(){
+
+ fwTimer++;
+ if(fwTimer%40===0) launchFirework();
 
  let next=[];
 
- if(fw.length<40) launch();
+ for(let p of fireworks){
 
- fw.forEach(p=>{
-  if(!p.vx){
+  if(p.type==="rocket"){
    p.y+=p.vy;
-   ctx.fillStyle="#fff";
-   ctx.fillRect(p.x,p.y,3,6);
 
-   if(p.y<canvas.height*0.3) explode(p.x,p.y);
-   else next.push(p);
+   ctx.globalAlpha=1;
+   ctx.fillStyle=p.color;
+   ctx.fillRect(p.x,p.y,3,8);
+
+   if(p.y<=p.targetY){
+     explodeFirework(p.x,p.y,p.color);
+   }else next.push(p);
 
   }else{
    p.x+=p.vx;
@@ -171,41 +254,57 @@ function drawFire(){
    p.vy+=0.05;
    p.life--;
 
-   ctx.globalAlpha=p.life/40;
-   ctx.fillStyle="#fff";
-   ctx.fillRect(p.x,p.y,2,2);
+   ctx.globalAlpha=p.life/p.maxLife;
+   ctx.strokeStyle=p.color;
+
+   ctx.beginPath();
+   ctx.moveTo(p.x,p.y);
+   ctx.lineTo(p.x-p.vx*2,p.y-p.vy*2);
+   ctx.stroke();
 
    if(p.life>0) next.push(p);
   }
- });
+ }
 
- fw=next;
+ fireworks=next;
  ctx.globalAlpha=1;
 }
 
-// ===== START =====
+// ================= START =================
 async function start(){
 
  if(started) return;
  started=true;
 
- await initCamera(); // 🔥 한번만 요청
+ await initCamera();
 
  document.getElementById("intro").style.display="none";
  document.getElementById("camBtn").style.display="block";
 
  await countdown();
 
+ fireworks=[];
+ fwTimer=0;
+
+ if(txtStyle==="drone") initDrone();
+
  draw();
 }
 
-// ===== DRAW =====
+// ================= DRAW =================
 function draw(){
 
  ctx.clearRect(0,0,canvas.width,canvas.height);
 
- drawFire();
- drawText();
+ // 오로라 (배경)
+ if(effStyle==="aurora") drawAurora();
+
+ // 텍스트
+ if(txtStyle==="drone") drawDrone();
+ else drawText();
+
+ // 불꽃 (전경)
+ if(effStyle==="fireworks") drawFireworks();
 
  requestAnimationFrame(draw);
 }
