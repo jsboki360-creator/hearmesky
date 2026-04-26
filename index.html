@@ -76,7 +76,8 @@ const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
 let stream=null;
-let currentFacing="environment";
+let devices=[];
+let currentDeviceIndex=0;
 let started=false;
 
 // ================= RESIZE =================
@@ -89,21 +90,41 @@ onresize=resize;
 
 // ================= CAMERA =================
 async function initCamera(){
+
  if(stream) return;
 
  stream = await navigator.mediaDevices.getUserMedia({
-   video:{ facingMode: currentFacing },
+   video:true,
    audio:false
  });
 
  video.srcObject = stream;
  await video.play();
+
+ const all = await navigator.mediaDevices.enumerateDevices();
+ devices = all.filter(d=>d.kind==="videoinput");
+
+ currentDeviceIndex = devices.findIndex(d =>
+   d.label.toLowerCase().includes("back")
+ );
+ if(currentDeviceIndex<0) currentDeviceIndex=0;
 }
 
 async function switchCamera(){
- currentFacing = currentFacing==="environment"?"user":"environment";
- const track = stream.getVideoTracks()[0];
- await track.applyConstraints({facingMode: currentFacing});
+
+ if(devices.length<2) return;
+
+ currentDeviceIndex=(currentDeviceIndex+1)%devices.length;
+
+ const id = devices[currentDeviceIndex].deviceId;
+
+ const newStream = await navigator.mediaDevices.getUserMedia({
+   video:{deviceId:{exact:id}},
+   audio:false
+ });
+
+ video.srcObject.getTracks().forEach(t=>t.stop());
+ video.srcObject = newStream;
 }
 
 // ================= COUNTDOWN =================
@@ -117,13 +138,19 @@ async function countdown(){
 }
 
 // ================= TEXT =================
-function drawText(){
- let size=80;
- while(size>20){
-  ctx.font="bold "+size+"px Arial";
-  if(ctx.measureText(text).width<canvas.width*0.8) break;
-  size-=2;
+function fitFont(txt,maxW){
+ let s=100;
+ while(s>20){
+  ctx.font="bold "+s+"px Arial";
+  if(ctx.measureText(txt).width<maxW) break;
+  s-=2;
  }
+ return s;
+}
+
+function drawText(){
+ let s=fitFont(text,canvas.width*0.8);
+ ctx.font="bold "+s+"px Arial";
  ctx.fillStyle="#fff";
  ctx.textAlign="center";
  ctx.fillText(text,canvas.width/2,canvas.height*0.4);
@@ -135,11 +162,13 @@ function initDrone(){
  drone=[];
  const off=document.createElement("canvas");
  const o=off.getContext("2d");
+
  off.width=canvas.width;
  off.height=canvas.height;
 
+ let s=fitFont(text,canvas.width*0.8);
  o.fillStyle="#fff";
- o.font="bold 100px Arial";
+ o.font="bold "+s+"px Arial";
  o.textAlign="center";
  o.fillText(text,canvas.width/2,canvas.height*0.4);
 
@@ -157,6 +186,56 @@ function initDrone(){
 function drawDrone(){
  ctx.fillStyle="#fff";
  drone.forEach(p=>ctx.fillRect(p.x,p.y,2,2));
+}
+
+// ================= CLOUD =================
+let cloud=[];
+function initCloud(){
+ cloud=[];
+ const off=document.createElement("canvas");
+ const o=off.getContext("2d");
+
+ off.width=canvas.width;
+ off.height=canvas.height;
+
+ let s=fitFont(text,canvas.width*0.8);
+ o.fillStyle="#fff";
+ o.font="bold "+s+"px Arial";
+ o.textAlign="center";
+ o.fillText(text,canvas.width/2,canvas.height*0.4);
+
+ const img=o.getImageData(0,0,off.width,off.height);
+
+ for(let y=0;y<off.height;y+=8){
+  for(let x=0;x<off.width;x+=8){
+   let i=(y*off.width+x)*4;
+   if(img.data[i+3]>128){
+     cloud.push({
+       x,y,
+       r:8+Math.random()*10,
+       dx:(Math.random()-0.5)*0.5,
+       dy:(Math.random()-0.5)*0.3
+     });
+   }
+  }
+ }
+}
+
+function drawCloud(){
+ cloud.forEach(p=>{
+   p.x+=p.dx;
+   p.y+=p.dy;
+
+   let g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+   g.addColorStop(0,"rgba(255,255,255,0.9)");
+   g.addColorStop(0.5,"rgba(255,255,255,0.5)");
+   g.addColorStop(1,"rgba(255,255,255,0)");
+
+   ctx.fillStyle=g;
+   ctx.beginPath();
+   ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+   ctx.fill();
+ });
 }
 
 // ================= AURORA =================
@@ -203,26 +282,25 @@ function launchFirework(){
 
  fireworks.push({
    type:"rocket",
-   x:x,
-   y:canvas.height,
+   x,y:canvas.height,
    vy:-4-Math.random()*2,
-   targetY:targetY,
+   targetY,
    color:getColor()
  });
 }
 
 function explodeFirework(x,y,color){
- for(let i=0;i<30;i++){
+ for(let i=0;i<40;i++){
    let a=Math.random()*Math.PI*2;
-   let s=2+Math.random()*2;
+   let s=2+Math.random()*2.5;
 
    fireworks.push({
      type:"spark",
      x,y,
      vx:Math.cos(a)*s,
      vy:Math.sin(a)*s,
-     life:60,
-     maxLife:60,
+     life:70,
+     maxLife:70,
      color
    });
  }
@@ -231,7 +309,7 @@ function explodeFirework(x,y,color){
 function drawFireworks(){
 
  fwTimer++;
- if(fwTimer%40===0) launchFirework();
+ if(fwTimer%50===0) launchFirework();
 
  let next=[];
 
@@ -240,7 +318,6 @@ function drawFireworks(){
   if(p.type==="rocket"){
    p.y+=p.vy;
 
-   ctx.globalAlpha=1;
    ctx.fillStyle=p.color;
    ctx.fillRect(p.x,p.y,3,8);
 
@@ -251,7 +328,7 @@ function drawFireworks(){
   }else{
    p.x+=p.vx;
    p.y+=p.vy;
-   p.vy+=0.05;
+   p.vy+=0.04;
    p.life--;
 
    ctx.globalAlpha=p.life/p.maxLife;
@@ -283,10 +360,10 @@ async function start(){
 
  await countdown();
 
- fireworks=[];
- fwTimer=0;
+ fireworks=[]; fwTimer=0;
 
  if(txtStyle==="drone") initDrone();
+ if(txtStyle==="cloud") initCloud();
 
  draw();
 }
@@ -296,14 +373,12 @@ function draw(){
 
  ctx.clearRect(0,0,canvas.width,canvas.height);
 
- // 오로라 (배경)
  if(effStyle==="aurora") drawAurora();
 
- // 텍스트
  if(txtStyle==="drone") drawDrone();
+ else if(txtStyle==="cloud") drawCloud();
  else drawText();
 
- // 불꽃 (전경)
  if(effStyle==="fireworks") drawFireworks();
 
  requestAnimationFrame(draw);
