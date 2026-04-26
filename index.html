@@ -14,14 +14,16 @@ font-family:Arial;
 }
 
 video{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-object-fit:cover;
-z-index:0;
-filter:brightness(0.6);
+  position:fixed;
+  top:50%;
+  left:50%;
+  min-width:100%;
+  min-height:100%;
+  width:auto;
+  height:auto;
+  transform:translate(-50%,-50%);
+  object-fit:cover;
+  background:black;
 }
 
 canvas{
@@ -315,63 +317,67 @@ let auroraTime = 0;
 
 function drawAurora(){
 
- auroraTime += 0.025;
+  auroraTime += 0.015;
+  const t = auroraTime;
 
- const t = auroraTime;
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = 0.6;
 
- ctx.save();
- ctx.globalAlpha = 0.38;
- ctx.filter = "blur(3px)";
+  const topY = canvas.height * 0.05;
+  const height = canvas.height * 0.45;
 
- const count = 14;
+  for(let band=0; band<4; band++){
 
- for(let i=0;i<count;i++){
+    ctx.beginPath();
 
-   let baseX=(i/count)*canvas.width;
-   let width=canvas.width/count*1.6;
+    let baseY = topY + band * 15;
 
-   let hue=350 + Math.sin(t + i)*25;
+    // 상단 라인
+    for(let x=0; x<=canvas.width; x+=10){
 
-   let g=ctx.createLinearGradient(baseX,0,baseX,canvas.height*0.7);
+      let nx = x / canvas.width;
 
-   g.addColorStop(0,`hsla(${hue},100%,65%,0.35)`);
-   g.addColorStop(0.5,`hsla(${hue+20},100%,55%,0.25)`);
-   g.addColorStop(1,"transparent");
+      let wave =
+        Math.sin(nx * 8 + t + band) * 30 +
+        Math.sin(nx * 20 + t*0.7) * 15;
 
-   ctx.fillStyle=g;
+      ctx.lineTo(x, baseY + wave);
+    }
 
-   ctx.beginPath();
+    // 하단 라인 (커튼)
+    for(let x=canvas.width; x>=0; x-=10){
 
-   for(let y=0;y<canvas.height*0.7;y+=4){
+      let nx = x / canvas.width;
 
-     let wave =
-       Math.sin(y*0.008+t*2+i*0.3)*35 +
-       Math.sin(y*0.02+t*1.5+i)*18;
+      let wave =
+        Math.sin(nx * 8 + t + band) * 30 +
+        Math.sin(nx * 20 + t*0.7) * 15;
 
-     let x = baseX + wave;
+      ctx.lineTo(x, baseY + wave + height);
+    }
 
-     if(y===0) ctx.moveTo(x,y);
-     else ctx.lineTo(x,y);
-   }
+    ctx.closePath();
 
-   for(let y=canvas.height*0.7;y>=0;y-=4){
+    let g = ctx.createLinearGradient(0, topY, 0, topY + height);
 
-     let wave =
-       Math.sin(y*0.008+t*2+i*0.3)*35 +
-       Math.sin(y*0.02+t*1.5+i)*18;
+    if(band % 2 === 0){
+      g.addColorStop(0, "rgba(120,255,180,0.7)");
+      g.addColorStop(0.5, "rgba(80,200,255,0.3)");
+      g.addColorStop(1, "transparent");
+    }else{
+      g.addColorStop(0, "rgba(180,120,255,0.6)");
+      g.addColorStop(0.5, "rgba(100,180,255,0.25)");
+      g.addColorStop(1, "transparent");
+    }
 
-     let x = baseX + wave + width;
+    ctx.fillStyle = g;
+    ctx.filter = "blur(12px)";
+    ctx.fill();
+  }
 
-     ctx.lineTo(x,y);
-   }
-
-   ctx.closePath();
-   ctx.fill();
- }
-
- ctx.restore();
+  ctx.restore();
 }
-
 // ================= FIREWORKS =================
 let rockets=[], sparks=[];
 
