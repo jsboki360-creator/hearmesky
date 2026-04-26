@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#000000">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -80,7 +81,24 @@ button{
 
 <video id="video" autoplay playsinline muted></video>
 <canvas id="c"></canvas>
-<div id="count"></div>
+<div id="openChrome" style="
+ position:fixed;
+ bottom:30px;
+ left:50%;
+ transform:translateX(-50%);
+ z-index:20;
+ display:none;
+">
+  <button onclick="openChrome()" style="
+    padding:15px 25px;
+    border-radius:30px;
+    border:none;
+    font-size:16px;
+    background:#fff;
+  ">
+    Chrome에서 열기
+  </button>
+</div>
 
 <script>
 
@@ -93,6 +111,11 @@ const effStyle = p.get("effsty")||"none";
 const video = document.getElementById("video");
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
+const ua = navigator.userAgent.toLowerCase();
+
+if(ua.includes("kakaotalk")){
+  document.getElementById("openChrome").style.display = "block";
+}
 
 let stream = null;
 
@@ -166,6 +189,9 @@ function draw(){
  requestAnimationFrame(draw);
 }
 
+function openChrome(){
+  location.href = location.href;
+}
 </script>
 </body>
 </html>
