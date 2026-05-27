@@ -7,6 +7,8 @@
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
+<title>HearMeSKY</title>
+
 <style>
 
 html,body{
@@ -29,6 +31,7 @@ transform:translate(-50%,-50%);
 object-fit:cover;
 z-index:0;
 filter:brightness(0.7);
+background:black;
 }
 
 canvas{
@@ -44,8 +47,10 @@ pointer-events:none;
 #ui{
 
 position:fixed;
+
 left:50%;
 top:50%;
+
 transform:translate(-50%,-50%);
 
 z-index:5;
@@ -181,14 +186,6 @@ value="WE LOVE YOU">
 
 <div class="selects">
 
-<select id="txtsty">
-
-<option value="drone">
-Drone
-</option>
-
-</select>
-
 <select id="effsty">
 
 <option value="aurora">
@@ -269,6 +266,8 @@ let sparkles=[];
 let rockets=[];
 let sparks=[];
 
+let stars=[];
+
 let auroraTime=0;
 
 let message="";
@@ -323,13 +322,21 @@ async function startShow(){
 
  initDrone();
 
+ initStars();
+
  started=true;
+
+ setTimeout(()=>{
+
+   window.stop();
+
+ },1000);
 
  draw();
 }
 
 // =====================================================
-// DRONE
+// MULTILINE
 // =====================================================
 
 function drawMultiline(
@@ -376,6 +383,10 @@ lineHeight
  });
 }
 
+// =====================================================
+// DRONE
+// =====================================================
+
 function initDrone(){
 
  const off =
@@ -417,9 +428,9 @@ function initDrone(){
 
  droneParticles=[];
 
- for(let y=0;y<off.height;y+=8){
+ for(let y=0;y<off.height;y+=5){
 
-  for(let x=0;x<off.width;x+=8){
+  for(let x=0;x<off.width;x+=5){
 
    let i=(y*off.width+x)*4;
 
@@ -434,10 +445,10 @@ function initDrone(){
       ty:y,
 
       size:
-      Math.random()*2+1.5,
+      Math.random()*3+2,
 
       hue:
-      180+Math.random()*80
+      200+Math.random()*20
     });
    }
   }
@@ -457,14 +468,14 @@ function drawDrone(){
   p.y+=(p.ty-p.y)*0.22;
 
   let flicker=
-  0.7+
+  0.8+
   Math.sin(
    Date.now()*0.01+i
-  )*0.3;
+  )*0.2;
 
   ctx.globalAlpha=flicker;
 
-  ctx.shadowBlur=25;
+  ctx.shadowBlur=10;
 
   ctx.shadowColor=
   `hsl(${p.hue},100%,70%)`;
@@ -494,118 +505,186 @@ function drawDrone(){
 
 function drawAurora(){
 
- auroraTime+=0.01;
+ auroraTime += 0.01;
 
- const t=auroraTime;
+ const t = auroraTime;
+
+ ctx.save();
+
+ ctx.globalCompositeOperation = "screen";
+
+ ctx.globalAlpha = 0.22;
+
+ const topY = H * 0.03;
+
+ const height = H * 0.45;
+
+ for(let band=0; band<4; band++){
+
+  ctx.beginPath();
+
+  let baseY =
+  topY + band * 14;
+
+  for(let x=0; x<=W; x+=16){
+
+   let nx = x / W;
+
+   let wave =
+
+     Math.sin(
+       nx * 8 + t + band
+     ) * 28
+
+     +
+
+     Math.sin(
+       nx * 18 + t * 0.5
+     ) * 14;
+
+   ctx.lineTo(
+     x,
+     baseY + wave
+   );
+  }
+
+  for(let x=W; x>=0; x-=16){
+
+   let nx = x / W;
+
+   let wave =
+
+     Math.sin(
+       nx * 8 + t + band
+     ) * 28
+
+     +
+
+     Math.sin(
+       nx * 18 + t * 0.5
+     ) * 14;
+
+   ctx.lineTo(
+     x,
+     baseY + wave + height
+   );
+  }
+
+  ctx.closePath();
+
+  let g =
+  ctx.createLinearGradient(
+    0,
+    topY,
+    0,
+    topY + height
+  );
+
+  if(band % 2 === 0){
+
+   g.addColorStop(
+     0,
+     "rgba(120,255,180,0.55)"
+   );
+
+   g.addColorStop(
+     0.5,
+     "rgba(80,180,255,0.12)"
+   );
+
+  }else{
+
+   g.addColorStop(
+     0,
+     "rgba(180,120,255,0.45)"
+   );
+
+   g.addColorStop(
+     0.5,
+     "rgba(100,180,255,0.10)"
+   );
+  }
+
+  g.addColorStop(
+    1,
+    "transparent"
+  );
+
+  ctx.fillStyle = g;
+
+  ctx.filter = "none";
+
+  ctx.fill();
+ }
+
+ ctx.restore();
+}
+
+// =====================================================
+// STARS
+// =====================================================
+
+function initStars(){
+
+ stars=[];
+
+ for(let i=0;i<250;i++){
+
+  stars.push({
+
+   x:Math.random()*W,
+   y:Math.random()*H,
+
+   size:Math.random()*2+1,
+
+   alpha:Math.random(),
+
+   hue:180+Math.random()*80
+  });
+ }
+}
+
+function drawStars(){
 
  ctx.save();
 
  ctx.globalCompositeOperation=
  "screen";
 
- ctx.globalAlpha=0.65;
+ stars.forEach((s,i)=>{
 
- const topY=H*0.03;
+  let twinkle=
 
- const height=H*0.5;
+  0.3+
 
- for(let band=0;band<5;band++){
+  Math.sin(
+   Date.now()*0.002+i
+  )*0.7;
 
-  ctx.beginPath();
+  ctx.globalAlpha=twinkle;
 
-  let baseY=
-  topY+band*16;
+  ctx.shadowBlur=8;
 
-  for(let x=0;x<=W;x+=12){
+  ctx.shadowColor=
+  `hsl(${s.hue},100%,70%)`;
 
-   let nx=x/W;
+  ctx.fillStyle=
+  `hsl(${s.hue},100%,70%)`;
 
-   let wave=
-
-    Math.sin(
-      nx*8+t+band
-    )*35
-
-    +
-
-    Math.sin(
-      nx*18+t*0.6
-    )*18;
-
-   ctx.lineTo(
-    x,
-    baseY+wave
-   );
-  }
-
-  for(let x=W;x>=0;x-=12){
-
-   let nx=x/W;
-
-   let wave=
-
-    Math.sin(
-      nx*8+t+band
-    )*35
-
-    +
-
-    Math.sin(
-      nx*18+t*0.6
-    )*18;
-
-   ctx.lineTo(
-    x,
-    baseY+wave+height
-   );
-  }
-
-  ctx.closePath();
-
-  let g=
-  ctx.createLinearGradient(
-   0,
-   topY,
-   0,
-   topY+height
+  ctx.fillRect(
+   s.x-4,
+   s.y,
+   8,
+   1
   );
 
-  if(band%2===0){
-
-   g.addColorStop(
-    0,
-    "rgba(120,255,180,0.75)"
-   );
-
-   g.addColorStop(
-    0.5,
-    "rgba(80,180,255,0.2)"
-   );
-
-  }else{
-
-   g.addColorStop(
-    0,
-    "rgba(200,120,255,0.6)"
-   );
-
-   g.addColorStop(
-    0.5,
-    "rgba(100,180,255,0.2)"
-   );
-  }
-
-  g.addColorStop(
+  ctx.fillRect(
+   s.x,
+   s.y-4,
    1,
-   "transparent"
+   8
   );
-
-  ctx.fillStyle=g;
-
-  ctx.filter="blur(20px)";
-
-  ctx.fill();
- }
+ });
 
  ctx.restore();
 }
@@ -616,7 +695,7 @@ function drawAurora(){
 
 function spawnSparkles(){
 
- for(let i=0;i<4;i++){
+ for(let i=0;i<1;i++){
 
   sparkles.push({
 
@@ -666,7 +745,7 @@ function drawSparkles(){
 
   ctx.globalAlpha=a;
 
-  ctx.shadowBlur=20;
+  ctx.shadowBlur=8;
 
   ctx.shadowColor=
   `hsl(${s.hue},100%,70%)`;
@@ -687,17 +766,17 @@ function drawSparkles(){
   ctx.fill();
 
   ctx.fillRect(
-   s.x-6,
+   s.x-5,
    s.y,
-   12,
+   10,
    1
   );
 
   ctx.fillRect(
    s.x,
-   s.y-6,
+   s.y-5,
    1,
-   12
+   10
   );
 
   if(s.life<=0){
@@ -814,7 +893,7 @@ function drawFireworks(){
 
   ctx.globalAlpha=s.life/90;
 
-  ctx.shadowBlur=15;
+  ctx.shadowBlur=10;
 
   ctx.shadowColor=s.color;
 
@@ -865,6 +944,8 @@ function draw(){
 
   drawFireworks();
  }
+
+ drawStars();
 
  drawSparkles();
 
