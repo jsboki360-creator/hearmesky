@@ -30,8 +30,10 @@ min-height:100%;
 transform:translate(-50%,-50%);
 object-fit:cover;
 z-index:0;
-filter:brightness(0.7);
 background:black;
+
+/* 🔥 chrome 안정화 */
+filter:none;
 }
 
 canvas{
@@ -459,8 +461,9 @@ function drawDrone(){
 
  ctx.save();
 
+ // 🔥 chrome 안정화
  ctx.globalCompositeOperation=
- "screen";
+ "lighter";
 
  droneParticles.forEach((p,i)=>{
 
@@ -511,7 +514,9 @@ function drawAurora(){
 
  ctx.save();
 
- ctx.globalCompositeOperation = "screen";
+ // 🔥 chrome 안정화
+ ctx.globalCompositeOperation =
+ "lighter";
 
  ctx.globalAlpha = 0.22;
 
@@ -612,8 +617,6 @@ function drawAurora(){
 
   ctx.fillStyle = g;
 
-  ctx.filter = "none";
-
   ctx.fill();
  }
 
@@ -648,8 +651,9 @@ function drawStars(){
 
  ctx.save();
 
+ // 🔥 chrome 안정화
  ctx.globalCompositeOperation=
- "screen";
+ "lighter";
 
  stars.forEach((s,i)=>{
 
@@ -725,8 +729,9 @@ function drawSparkles(){
 
  ctx.save();
 
+ // 🔥 chrome 안정화
  ctx.globalCompositeOperation=
- "screen";
+ "lighter";
 
  for(
  let i=sparkles.length-1;
