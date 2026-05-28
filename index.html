@@ -234,8 +234,7 @@ function resize(){
  W=innerWidth;
  H=innerHeight;
 
- const dpr =
- window.devicePixelRatio || 1;
+const dpr = 1;
 
  canvas.width=W*dpr;
  canvas.height=H*dpr;
@@ -430,9 +429,9 @@ function initDrone(){
 
  droneParticles=[];
 
- for(let y=0;y<off.height;y+=5){
+ for(let y=0;y<off.height;y+=8){
 
-  for(let x=0;x<off.width;x+=5){
+  for(let x=0;x<off.width;x+=8){
 
    let i=(y*off.width+x)*4;
 
@@ -631,7 +630,7 @@ function initStars(){
 
  stars=[];
 
- for(let i=0;i<250;i++){
+ for(let i=0;i<40;i++){
 
   stars.push({
 
@@ -898,7 +897,7 @@ function drawFireworks(){
 
   ctx.globalAlpha=s.life/90;
 
-  ctx.shadowBlur=10;
+  ctx.shadowBlur=3;
 
   ctx.shadowColor=s.color;
 
