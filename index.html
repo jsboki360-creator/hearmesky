@@ -437,12 +437,7 @@ function draw(now){
 
  // 반복 폭발
 
- if(now-lastBurst>4000){
 
-  createBurst();
-
-  lastBurst=now;
- }
 
  // 파티클
 
@@ -482,36 +477,67 @@ function draw(now){
 
  // 문구
 
- if(t>2000){
+if(t>2000){
 
-  ctx.textAlign="center";
+    const yy = H*0.12;
 
-  ctx.fillStyle="#ffe06b";
+    // 배너
 
-  ctx.font="bold 64px Arial";
+    ctx.fillStyle =
+    "rgba(0,0,0,0.35)";
 
-  const arr=
-  message.split(" ");
+    ctx.beginPath();
 
-  let yy=
-  H*0.50;
+    ctx.roundRect(
+        W*0.08,
+        yy-26,
+        W*0.84,
+        52,
+        20
+    );
 
-  arr.forEach((s,i)=>{
+    ctx.fill();
 
-   ctx.fillText(
+    // 행사명
 
-    s,
+    ctx.textAlign =
+    "center";
 
-    W/2,
+    ctx.textBaseline =
+    "middle";
 
-    yy+i*80
-   );
-  });
- }
+    ctx.strokeStyle =
+    "rgba(0,0,0,0.55)";
 
+    ctx.lineWidth = 4;
+
+    ctx.fillStyle =
+    "#ffe06b";
+
+    ctx.font =
+    "bold 30px Arial";
+
+    const banner =
+
+      "🏌️ " +
+      message +
+      " ⛳";
+
+    ctx.strokeText(
+        banner,
+        W/2,
+        yy
+    );
+
+    ctx.fillText(
+        banner,
+        W/2,
+        yy
+    );
+}
  // 배경 반짝
 
- for(let i=0;i<40;i++){
+ for(let i=0;i<12;i++)
 
   let x=
 
