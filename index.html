@@ -281,7 +281,7 @@ a
 function drawHole(){
 
  const x=W/2;
- const y=H*0.20;
+ const y=H*0.07;
 
  ctx.fillStyle="#31b95e";
 
@@ -342,41 +342,6 @@ function drawHole(){
  ctx.fill();
 }
 
-function drawTrophy(){
-
- const x=W/2;
- const y=H*0.31;
-
- ctx.fillStyle="#ffd84d";
-
- ctx.beginPath();
-
- ctx.moveTo(x-28,y);
-
- ctx.lineTo(x+28,y);
-
- ctx.lineTo(x+18,y+28);
-
- ctx.lineTo(x-18,y+28);
-
- ctx.closePath();
-
- ctx.fill();
-
- ctx.fillRect(
- x-5,
- y+28,
- 10,
- 14
- );
-
- ctx.fillRect(
- x-22,
- y+42,
- 44,
- 8
- );
-}
 
 function draw(now){
 
@@ -391,7 +356,7 @@ function draw(now){
 
  drawHole();
 
- drawTrophy();
+
 
  let t=
  now-startTime;
@@ -479,7 +444,7 @@ function draw(now){
 
 if(t>2000){
 
-    const yy = H*0.12;
+    const yy = H*0.09;
 
     // 배너
 
@@ -515,13 +480,11 @@ if(t>2000){
     "#ffe06b";
 
     ctx.font =
-    "bold 30px Arial";
+    "bold 24px Arial";
 
     const banner =
 
-      "🏌️ " +
-      message +
-      " ⛳";
+"🏌️ 제10회 76정회원 골프회";
 
     ctx.strokeText(
         banner,
@@ -535,16 +498,18 @@ if(t>2000){
         yy
     );
 }
- // 배경 반짝
+// ============================
+// 배경 반짝
+// ============================
 
- for(let i=0;i<12;i++)
+for(let i=0;i<12;i++){
 
-  let x=
+  let x =
 
   (i*137+
    now*0.02)%W;
 
-  let y=
+  let y =
 
   ((i*91)+
    now*0.04)%H;
@@ -563,8 +528,7 @@ if(t>2000){
 
    0.8
   );
- }
-
+}
  requestAnimationFrame(draw);
 }
 
